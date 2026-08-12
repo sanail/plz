@@ -52,7 +52,13 @@ pub const OPENROUTER: Preset = Preset {
     name: "openrouter",
     title: "OpenRouter",
     base_url: "https://openrouter.ai/api/v1",
-    model: "deepseek/deepseek-v4-flash",
+    // The `~` prefix is OpenRouter's router alias: it resolves to the newest
+    // model of the family, so this preset does not go stale — and eventually
+    // 404 — each time a dated Flash release replaces the previous one. The bare
+    // `deepseek/deepseek-v4-flash` is a browsable page, not an id the API
+    // accepts: the catalogue at /api/v1/models carries only the dated slugs and
+    // this alias.
+    model: "~deepseek/deepseek-v4-flash-latest",
     key_env: Some("OPENROUTER_API_KEY"),
     json_mode: true,
     // A proxy in front of many providers: an unknown field in the body is
