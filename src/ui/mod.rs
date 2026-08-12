@@ -10,6 +10,9 @@ pub enum Outcome {
     Buffer(usize),
     /// Copy to the clipboard and exit
     Copy(usize),
+    /// The suggestions were printed with no way to pick one, because there was
+    /// no terminal to pick with. Nothing ran, but nothing failed either.
+    Listed,
     /// Cancel: do nothing
     Cancel,
 }

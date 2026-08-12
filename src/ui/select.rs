@@ -17,6 +17,9 @@ const FOOTER_LINES: u16 = 2;
 ///
 /// `buffer_supported` only changes the Tab key's caption: in shells without
 /// prompt-buffer insertion it copies the command to the clipboard instead.
+///
+/// Without a terminal on stderr there is nobody to ask, so the list is printed
+/// and the result is `Outcome::Listed` rather than a cancellation.
 pub fn select(suggestions: &[Suggestion], buffer_supported: bool) -> Result<Outcome> {
     if suggestions.is_empty() {
         return Ok(Outcome::Cancel);
@@ -27,8 +30,10 @@ pub fn select(suggestions: &[Suggestion], buffer_supported: bool) -> Result<Outc
     let mut out = io::stderr();
     if !out.is_terminal() {
         // With no terminal there is nothing to pick with: print and leave.
+        // Not a cancellation — `plz "task" > file` did exactly what was asked,
+        // and reporting 130 there would break the next step of any pipeline.
         print_plain(suggestions);
-        return Ok(Outcome::Cancel);
+        return Ok(Outcome::Listed);
     }
 
     terminal::enable_raw_mode()?;
@@ -248,6 +253,20 @@ mod tests {
     #[test]
     fn empty_list_cancels_instead_of_hanging() {
         // Otherwise select() would sit in event::read() with an empty screen.
+        // Cancel rather than Listed: nothing was printed, so nothing was
+        // delivered either, and callers must not treat it as a success.
         assert_eq!(select(&[], true).unwrap(), Outcome::Cancel);
+    }
+
+    #[test]
+    fn a_non_interactive_stderr_lists_instead_of_cancelling() {
+        // `cargo test` captures stderr, so this is the no-terminal path. Under
+        // --nocapture in a real terminal it would block on a keypress instead,
+        // which is not something a test should do.
+        if io::stderr().is_terminal() {
+            return;
+        }
+        let suggestions = [Suggestion::new("ls -la", "list files")];
+        assert_eq!(select(&suggestions, true).unwrap(), Outcome::Listed);
     }
 }

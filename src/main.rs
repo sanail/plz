@@ -150,6 +150,9 @@ fn handle_outcome(
 ) -> Result<()> {
     match outcome {
         Outcome::Cancel => std::process::exit(130),
+        // The suggestions have already been printed and there was no terminal
+        // to choose with; that is a completed run, not a failed one.
+        Outcome::Listed => Ok(()),
         Outcome::Copy(index) => {
             let command = &suggestions[index].command;
             let method = clipboard::copy(command)?;
