@@ -21,11 +21,59 @@ your request.
 
 ## Installation
 
-No prebuilt binaries yet; build from source (needs Rust 1.85+):
+macOS and Linux:
+
+```sh
+brew install sanail/tap/plz
+```
+
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/sanail/plz/releases/latest/download/plz-installer.sh | sh
+```
+
+Windows:
+
+```powershell
+powershell -c "irm https://github.com/sanail/plz/releases/latest/download/plz-installer.ps1 | iex"
+```
+
+The installers download a prebuilt binary, put it in `~/.local/bin` and add that
+directory to your `PATH`; no Rust toolchain is involved. From source instead
+(needs Rust 1.85+):
 
 ```sh
 cargo install --path .
 ```
+
+### By hand
+
+Take the archive for your platform from the
+[releases page](https://github.com/sanail/plz/releases): on Apple Silicon
+`plz-aarch64-apple-darwin.tar.xz`, on an Intel Mac
+`plz-x86_64-apple-darwin.tar.xz` — `uname -m` says which you are on —
+`plz-x86_64-unknown-linux-gnu.tar.xz` on Linux,
+`plz-x86_64-pc-windows-msvc.zip` on Windows. Each archive holds the binary, this
+README and the license; `sha256.sum` in the release covers them all.
+
+On macOS and Linux:
+
+```sh
+tar -xf plz-aarch64-apple-darwin.tar.xz
+cd plz-aarch64-apple-darwin
+xattr -c plz                      # macOS only
+sudo mv plz /usr/local/bin/
+```
+
+`/usr/local/bin` is on the default `PATH` on both systems. Without `sudo`, move
+it to `~/.local/bin` instead and add that directory to `PATH` yourself.
+
+The `xattr` line matters only on macOS: a file the browser downloaded carries a
+quarantine attribute, and an unsigned binary that carries it refuses to start.
+Downloads made with `curl` never get the attribute, so the line is a no-op then.
+
+On Windows, unpack the zip, put `plz.exe` wherever you keep such things and add
+that directory to `PATH` through "Edit environment variables for your account".
+The binary is unsigned, so the first run may raise a SmartScreen warning.
 
 Then run the first-time setup:
 
