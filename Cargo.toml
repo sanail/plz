@@ -6,6 +6,9 @@ rust-version = "1.85"
 description = "Describe a task in plain language, get a command ready for your OS and shell"
 license = "MIT"
 repository = "https://github.com/sanail/plz"
+# The Homebrew formula dist generates carries a homepage field, and it warns
+# when there is nothing to put there.
+homepage = "https://github.com/sanail/plz"
 
 [dependencies]
 anyhow = "1.0"
@@ -40,3 +43,9 @@ opt-level = "z"
 lto = true
 codegen-units = 1
 strip = true
+
+# The profile that 'dist' will build with. It inherits the release profile
+# unchanged: the settings there are tuned for the size of a downloaded binary,
+# which is exactly what dist ships.
+[profile.dist]
+inherits = "release"
