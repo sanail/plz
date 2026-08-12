@@ -241,6 +241,7 @@ struct ResponseMessage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testutil::env_guard;
 
     #[test]
     fn endpoint_is_built_without_double_slash() {
@@ -256,6 +257,9 @@ mod tests {
 
     #[test]
     fn missing_key_is_reported_before_any_request() {
+        // The guard matters here more than anywhere: this test asserts the
+        // *absence* of keys that config's own tests set at the same moment.
+        let _guard = env_guard();
         let mut config = Config::default();
         config.provider.api_key = None;
         // Make sure no key leaks in from the developer's environment.

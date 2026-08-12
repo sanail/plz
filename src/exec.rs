@@ -131,6 +131,7 @@ fn child_shell_invocation(kind: ShellKind) -> (&'static str, &'static [&'static 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testutil::env_guard;
 
     #[test]
     fn protocol_round_trips() {
@@ -163,6 +164,7 @@ mod tests {
 
     #[test]
     fn hand_off_writes_a_parseable_file() {
+        let _guard = env_guard();
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("out");
         std::env::set_var("PLZ_OUTPUT_FILE", &path);
@@ -178,6 +180,7 @@ mod tests {
 
     #[test]
     fn hand_off_fails_clearly_without_integration() {
+        let _guard = env_guard();
         std::env::remove_var("PLZ_OUTPUT_FILE");
         let err = hand_off(Verb::Run, "ls").unwrap_err().to_string();
         assert!(err.contains("PLZ_OUTPUT_FILE"));

@@ -9,6 +9,8 @@ mod prompt;
 mod provider;
 mod safety;
 mod suggestion;
+#[cfg(test)]
+mod testutil;
 mod ui;
 
 use std::io::IsTerminal;

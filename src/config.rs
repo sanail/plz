@@ -217,11 +217,7 @@ fn restrict_permissions(_path: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// These tests mutate process-wide environment variables, so they run
-    /// under a shared mutex: cargo test's parallel threads would otherwise
-    /// interfere with each other.
-    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    use crate::testutil::env_guard;
 
     fn clear_key_vars() {
         std::env::remove_var(KEY_ENV);
@@ -253,7 +249,7 @@ mod tests {
 
     #[test]
     fn plz_api_key_wins_over_config_field() {
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = env_guard();
         clear_key_vars();
         let mut config = Config::default();
         config.provider.api_key = Some("from-config".into());
@@ -267,7 +263,7 @@ mod tests {
 
     #[test]
     fn preset_env_var_wins_over_config_field() {
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = env_guard();
         clear_key_vars();
         let mut config = Config::default(); // deepseek preset
         config.provider.api_key = Some("from-config".into());
@@ -279,7 +275,7 @@ mod tests {
 
     #[test]
     fn blank_env_var_does_not_shadow_config_field() {
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = env_guard();
         clear_key_vars();
         let mut config = Config::default();
         config.provider.api_key = Some("from-config".into());
@@ -300,7 +296,7 @@ mod tests {
     fn saved_file_is_owner_only_on_unix() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.toml");
-        let _guard = ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = env_guard();
         std::env::set_var(CONFIG_PATH_ENV, &path);
 
         let mut config = Config::default();
