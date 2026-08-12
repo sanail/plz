@@ -154,10 +154,14 @@ fn os_version() -> Option<String> {
 
 fn strip_os_prefix(version: &str, os: &str) -> String {
     let trimmed = version.trim();
-    if trimmed.len() > os.len() && trimmed[..os.len()].eq_ignore_ascii_case(os) {
-        let rest = trimmed[os.len()..].trim();
-        if !rest.is_empty() {
-            return rest.to_string();
+    // `get` rather than a plain slice: on a localized Windows the version can
+    // start with a multi-byte character, and slicing across its bytes panics.
+    if let Some(head) = trimmed.get(..os.len()) {
+        if head.eq_ignore_ascii_case(os) {
+            let rest = trimmed[os.len()..].trim();
+            if !rest.is_empty() {
+                return rest.to_string();
+            }
         }
     }
     trimmed.to_string()
@@ -303,6 +307,17 @@ mod tests {
         assert_eq!(strip_os_prefix("6.8.0-generic", "Linux"), "6.8.0-generic");
         // A string that is only the OS name must not collapse to empty.
         assert_eq!(strip_os_prefix("macOS", "macOS"), "macOS");
+    }
+
+    #[test]
+    fn a_non_ascii_version_does_not_panic() {
+        // A localized Windows can report the product name in its own script.
+        // "Windows" is 7 bytes, and byte 7 falls inside a character here — a
+        // plain slice would panic on every single run, `plz config show` too.
+        assert_eq!(strip_os_prefix("Виндовс 11", "Windows"), "Виндовс 11");
+        assert_eq!(strip_os_prefix("日本語版 11", "Windows"), "日本語版 11");
+        // Shorter than the OS name: nothing to compare against.
+        assert_eq!(strip_os_prefix("Ω", "Windows"), "Ω");
     }
 
     #[test]
