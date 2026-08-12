@@ -132,12 +132,10 @@ impl Config {
     pub fn save(&self) -> Result<PathBuf> {
         let path = Self::path()?;
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("could not create directory {}", parent.display()))?;
+            create_private_dir(parent)?;
         }
         let raw = toml::to_string_pretty(self).context("could not serialize the configuration")?;
-        fs::write(&path, raw).with_context(|| format!("could not write {}", path.display()))?;
-        restrict_permissions(&path)?;
+        write_private(&path, &raw)?;
         Ok(path)
     }
 
@@ -195,23 +193,63 @@ fn mask_key(key: &str) -> String {
     format!("{head}...{tail}")
 }
 
-/// Restrict the file to its owner (0600).
+/// Write a file only its owner can read (0600).
 ///
-/// Windows has no equivalent of Unix modes; there the file already lives in
-/// the user's profile, which other unprivileged accounts cannot reach.
+/// The mode is part of the create call rather than a `chmod` afterwards: with
+/// a plain write the key lands on disk under whatever the umask allows —
+/// usually world-readable — and stays that way until the next syscall. The
+/// window is short, but the file is a long-lived secret.
+///
+/// Windows has no equivalent of Unix modes; there the file already lives in the
+/// user's profile, which other unprivileged accounts cannot reach.
 #[cfg(unix)]
-fn restrict_permissions(path: &Path) -> Result<()> {
-    use std::os::unix::fs::PermissionsExt;
-    let mut perms = fs::metadata(path)?.permissions();
-    perms.set_mode(0o600);
-    fs::set_permissions(path, perms)
+fn write_private(path: &Path, contents: &str) -> Result<()> {
+    use std::io::Write;
+    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(path)
+        .with_context(|| format!("could not write {}", path.display()))?;
+
+    // `mode` applies only to a file this call creates, so a config left behind
+    // by an older version keeps its old permissions — tighten those too, while
+    // the file is still empty.
+    file.set_permissions(fs::Permissions::from_mode(0o600))
         .with_context(|| format!("could not set mode 0600 on {}", path.display()))?;
+
+    file.write_all(contents.as_bytes())
+        .with_context(|| format!("could not write {}", path.display()))?;
     Ok(())
 }
 
 #[cfg(not(unix))]
-fn restrict_permissions(_path: &Path) -> Result<()> {
-    Ok(())
+fn write_private(path: &Path, contents: &str) -> Result<()> {
+    fs::write(path, contents).with_context(|| format!("could not write {}", path.display()))
+}
+
+/// Create the config directory, on Unix reachable only by its owner (0700).
+#[cfg(unix)]
+fn create_private_dir(path: &Path) -> Result<()> {
+    use std::os::unix::fs::DirBuilderExt;
+
+    // The mode applies to the directories this call creates; ones that already
+    // exist — `~/.config`, `~/Library/Application Support` — are left alone,
+    // which is not ours to tighten.
+    fs::DirBuilder::new()
+        .recursive(true)
+        .mode(0o700)
+        .create(path)
+        .with_context(|| format!("could not create directory {}", path.display()))
+}
+
+#[cfg(not(unix))]
+fn create_private_dir(path: &Path) -> Result<()> {
+    fs::create_dir_all(path)
+        .with_context(|| format!("could not create directory {}", path.display()))
 }
 
 #[cfg(test)]
@@ -314,6 +352,50 @@ mod tests {
                 "the key must not be readable by others"
             );
         }
+
+        std::env::remove_var(CONFIG_PATH_ENV);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn an_existing_loose_config_is_tightened_on_save() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        let _guard = env_guard();
+        std::env::set_var(CONFIG_PATH_ENV, &path);
+
+        // Left behind by an older version, or by a hand-edit under a loose umask.
+        fs::write(&path, "# stale\n").unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+
+        let mut config = Config::default();
+        config.provider.api_key = Some("secret".into());
+        config.save().unwrap();
+
+        let mode = fs::metadata(&path).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o600, "an old loose file must be tightened");
+        assert!(fs::read_to_string(&path).unwrap().contains("secret"));
+
+        std::env::remove_var(CONFIG_PATH_ENV);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn the_config_directory_is_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let nested = dir.path().join("plz");
+        let path = nested.join("config.toml");
+        let _guard = env_guard();
+        std::env::set_var(CONFIG_PATH_ENV, &path);
+
+        Config::default().save().unwrap();
+
+        let mode = fs::metadata(&nested).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o700);
 
         std::env::remove_var(CONFIG_PATH_ENV);
     }
