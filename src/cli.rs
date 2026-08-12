@@ -5,7 +5,14 @@ use clap::{Parser, Subcommand, ValueEnum};
 #[command(name = "plz", version, about, long_about = None)]
 pub struct Cli {
     /// The task, in plain language. With no arguments, interactive mode opens.
-    #[arg(trailing_var_arg = true)]
+    ///
+    /// Flags go before the task: everything after it is read as part of it, so
+    /// `plz what does git push --force do` asks about the flag instead of using
+    /// it. A task starting with the word `config` or `hook` collides with the
+    /// subcommand of that name — quote it, or put `--` in front.
+    // trailing_var_arg is what lets an unquoted task contain a word starting
+    // with a dash, which is a question this tool gets asked constantly.
+    #[arg(trailing_var_arg = true, verbatim_doc_comment)]
     pub task: Vec<String>,
 
     /// How many command suggestions to request
@@ -87,5 +94,63 @@ impl Cli {
         } else {
             Some(joined)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(args: &[&str]) -> Cli {
+        Cli::parse_from(args)
+    }
+
+    #[test]
+    fn a_task_may_contain_a_word_starting_with_a_dash() {
+        // This is what trailing_var_arg buys, and it is the reason the flag
+        // placement below is a documented rule rather than a parser fix: asking
+        // about a flag is a routine use of this tool.
+        let cli = parse(&["plz", "what", "does", "git", "push", "--force", "do"]);
+        assert_eq!(
+            cli.task_text().as_deref(),
+            Some("what does git push --force do")
+        );
+    }
+
+    #[test]
+    fn flags_are_recognised_before_the_task() {
+        let cli = parse(&["plz", "--dry-run", "-n", "5", "clear the cache"]);
+        assert!(cli.dry_run);
+        assert_eq!(cli.count, Some(5));
+        assert_eq!(cli.task_text().as_deref(), Some("clear the cache"));
+    }
+
+    #[test]
+    fn flags_after_the_task_are_part_of_the_task() {
+        // Documented behaviour, not an accident: the same rule that lets a task
+        // mention `--force` also swallows a real flag put in that position.
+        let cli = parse(&["plz", "clear the cache", "--dry-run"]);
+        assert!(!cli.dry_run);
+        assert_eq!(
+            cli.task_text().as_deref(),
+            Some("clear the cache --dry-run")
+        );
+    }
+
+    #[test]
+    fn a_task_starting_with_a_subcommand_name_needs_quoting_or_a_separator() {
+        // Bare `plz config nginx` is parsed as the `config` subcommand and
+        // fails; these two forms are the documented ways around it.
+        assert_eq!(
+            parse(&["plz", "config nginx"]).task_text().as_deref(),
+            Some("config nginx")
+        );
+        assert_eq!(
+            parse(&["plz", "--", "config", "nginx"])
+                .task_text()
+                .as_deref(),
+            Some("config nginx")
+        );
+        assert!(Cli::try_parse_from(["plz", "config", "nginx"]).is_err());
     }
 }

@@ -99,6 +99,22 @@ plz [OPTIONS] [TASK DESCRIPTION...]
       --json          print the suggestions as JSON (for scripts)
 ```
 
+Flags go **before** the task. Everything after the task is read as part of it —
+which is what lets you ask about a flag without quoting anything:
+
+```sh
+plz --dry-run "clear the cache"      # a flag, so it goes first
+plz what does git push --force do    # --force is part of the question
+```
+
+A task whose first word is `config` or `hook` collides with the subcommand of the
+same name. Quote it, or put `--` in front:
+
+```sh
+plz "config nginx as a reverse proxy"
+plz -- config nginx as a reverse proxy
+```
+
 Subcommands: `plz config init|path|show|edit`, `plz hook <shell>`.
 
 `plz config show` prints the configuration (with the key masked) plus the
