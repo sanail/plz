@@ -1,0 +1,28 @@
+# Rust build artifacts
+/target
+**/*.rs.bk
+*.pdb
+
+# Backtrace / profiling output
+perf.data
+perf.data.old
+flamegraph.svg
+
+# Coverage
+*.profraw
+*.profdata
+
+# Editors / IDEs
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local environment
+.env
+.env.local
