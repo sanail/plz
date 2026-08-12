@@ -114,6 +114,13 @@ fn args(segment: &str) -> Vec<&str> {
     tokens
 }
 
+/// The program a segment runs: no leading `sudo`, no directory, no `.exe`.
+fn command_name(segment: &str) -> Option<&str> {
+    let first = args(segment).into_iter().next()?;
+    let name = first.rsplit(['/', '\\']).next().unwrap_or(first);
+    Some(name.strip_suffix(".exe").unwrap_or(name))
+}
+
 fn is_dangerous_rm(command: &str) -> bool {
     for segment in segments(command) {
         let tokens = args(segment);
@@ -132,11 +139,13 @@ fn is_dangerous_rm(command: &str) -> bool {
             continue;
         }
 
+        // `rm` is an alias of Remove-Item too, so a Windows path can turn up
+        // here with unix-style flags.
         if tokens
             .iter()
             .skip(1)
             .filter(|t| !t.starts_with('-'))
-            .any(|t| is_critical_path(t))
+            .any(|t| is_critical_path(t) || is_critical_windows_path(t))
         {
             return true;
         }
@@ -178,6 +187,42 @@ fn is_critical_path(raw: &str) -> bool {
     // Upper levels of the filesystem: /etc, /usr/bin, /var/lib and friends.
     let depth = trimmed.split('/').filter(|s| !s.is_empty()).count();
     depth <= 2
+}
+
+/// The same idea as `is_critical_path`, in Windows spelling.
+///
+/// Separate rather than folded in, because `C:\Users` and `/Users` are not the
+/// same depth: the drive letter is a level of its own, so a shared depth rule
+/// would either miss `C:\Windows` or flag every `C:\projects\app\build`.
+fn is_critical_windows_path(raw: &str) -> bool {
+    let path = raw.trim_matches(['"', '\'']).replace('\\', "/");
+
+    // The profile directory itself, in every spelling Windows shells use.
+    if matches!(
+        path.as_str(),
+        "~" | "~/" | "~/*" | "$home" | "$home/" | "$home/*" | "$env:userprofile"
+    ) {
+        return true;
+    }
+    // Everything in the working directory.
+    if matches!(
+        path.as_str(),
+        "*" | "." | "./" | "./*" | ".." | "../" | "../*"
+    ) {
+        return true;
+    }
+
+    // A drive letter is what makes this an absolute path: "c:" or "c:/...".
+    let Some((drive, rest)) = path.split_once(':') else {
+        return false;
+    };
+    if drive.len() != 1 || !drive.starts_with(|c: char| c.is_ascii_alphabetic()) {
+        return false;
+    }
+
+    // The drive root, or one level under it: C:\, C:\Windows, C:\Users.
+    let trimmed = rest.trim_end_matches('*').trim_end_matches('/');
+    trimmed.split('/').filter(|s| !s.is_empty()).count() <= 1
 }
 
 fn is_dangerous_dd(command: &str) -> bool {
@@ -315,26 +360,72 @@ fn is_force_push(command: &str) -> bool {
 }
 
 fn is_destructive_sql(command: &str) -> bool {
-    [
+    const CLIENTS: &[&str] = &[
+        "psql",
+        "mysql",
+        "mariadb",
+        "sqlite3",
+        "sqlcmd",
+        "mongosh",
+        "clickhouse-client",
+        "cockroach",
+    ];
+    const STATEMENTS: &[&str] = &[
         "drop table",
         "drop database",
         "drop schema",
         "truncate table",
         "delete from",
-    ]
-    .iter()
-    .any(|p| command.contains(p))
+    ];
+
+    // A database client has to be involved somewhere, or `grep "delete from"
+    // dump.sql` — which reads a file and touches no database — gets flagged.
+    // Any segment counts, so `echo "drop table x" | mysql` is still caught.
+    let mentions_a_client = segments(command)
+        .iter()
+        .filter_map(|s| command_name(s))
+        .any(|name| CLIENTS.contains(&name));
+
+    mentions_a_client && STATEMENTS.iter().any(|s| command.contains(s))
 }
 
+/// A recursive `Remove-Item` aimed at a critical path.
+///
+/// The path is checked for the same reason it is in `is_dangerous_rm`:
+/// `Remove-Item ./build -Recurse -Force` is routine work, and warning about it
+/// would teach people to confirm without reading — the one habit this module
+/// must not create. `-Force` is not required: deleting `C:\Windows` recursively
+/// is no less destructive for the files that go without it.
 fn is_powershell_recursive_delete(command: &str) -> bool {
-    let removes =
-        command.contains("remove-item") || command.contains("ri ") || command.contains("rd ");
-    if !removes {
-        return false;
+    // Every one of these is an alias of Remove-Item in PowerShell.
+    const ALIASES: &[&str] = &["remove-item", "ri", "rm", "rmdir", "rd", "del", "erase"];
+
+    for segment in segments(command) {
+        let Some(name) = command_name(segment) else {
+            continue;
+        };
+        if !ALIASES.contains(&name) {
+            continue;
+        }
+        let tokens = args(segment);
+        // PowerShell spells it -Recurse and accepts any unambiguous prefix.
+        let recursive = tokens
+            .iter()
+            .skip(1)
+            .any(|t| t.starts_with("-r") && "-recurse".starts_with(*t));
+        if !recursive {
+            continue;
+        }
+        if tokens
+            .iter()
+            .skip(1)
+            .filter(|t| !t.starts_with('-'))
+            .any(|t| is_critical_windows_path(t))
+        {
+            return true;
+        }
     }
-    let recursive = command.contains("-recurse") || command.contains("-r ");
-    let forced = command.contains("-force");
-    recursive && forced
+    false
 }
 
 fn is_powershell_format(command: &str) -> bool {
@@ -345,16 +436,24 @@ fn is_powershell_format(command: &str) -> bool {
 
 fn is_cmd_recursive_delete(command: &str) -> bool {
     for segment in segments(command) {
-        let tokens = args(segment);
-        let Some(first) = tokens.first() else {
+        let Some(name) = command_name(segment) else {
             continue;
         };
-        if !matches!(*first, "del" | "erase" | "rmdir" | "rd") {
+        if !matches!(name, "del" | "erase" | "rmdir" | "rd") {
             continue;
         }
-        let recursive = tokens.contains(&"/s");
-        let quiet_force = tokens.contains(&"/q") || tokens.contains(&"/f");
-        if recursive && quiet_force {
+        let tokens = args(segment);
+        if !tokens.contains(&"/s") {
+            continue;
+        }
+        // Switches here start with a slash, so a path cannot be told from one
+        // by the leading character alone — exclude both forms.
+        if tokens
+            .iter()
+            .skip(1)
+            .filter(|t| !t.starts_with('/') && !t.starts_with('-'))
+            .any(|t| is_critical_windows_path(t))
+        {
             return true;
         }
     }
@@ -471,6 +570,21 @@ mod tests {
         assert!(dangerous("diskpart"));
     }
 
+    #[test]
+    fn a_windows_delete_is_dangerous_without_force_too() {
+        // -Force only decides whether read-only files go quietly; everything
+        // else under the path is gone either way.
+        assert!(dangerous("Remove-Item C:\\Windows -Recurse"));
+        assert!(dangerous("rd /s C:\\Users"));
+        assert!(dangerous("rm -rf C:\\"));
+    }
+
+    #[test]
+    fn a_windows_profile_wipe_is_caught() {
+        assert!(dangerous("Remove-Item $env:USERPROFILE -Recurse -Force"));
+        assert!(dangerous("Remove-Item ~ -Recurse"));
+    }
+
     // --- no false positives ---
 
     #[test]
@@ -534,6 +648,38 @@ mod tests {
     #[test]
     fn selecting_from_a_database_is_safe() {
         assert!(!dangerous("psql -c 'SELECT * FROM users LIMIT 10'"));
+    }
+
+    #[test]
+    fn sql_outside_a_database_client_is_safe() {
+        // Reading a dump is not touching a database.
+        assert!(!dangerous("grep 'delete from' dump.sql"));
+        assert!(!dangerous("rg 'drop table' migrations/"));
+        assert!(!dangerous("cat schema.sql | grep -c 'truncate table'"));
+        // But a client on the other end of the pipe still counts.
+        assert!(dangerous("echo 'drop table users' | mysql shop"));
+    }
+
+    #[test]
+    fn scoped_windows_deletions_are_safe() {
+        // These are everyday commands. Warning about them is worse than
+        // useless: it is what teaches people to confirm without reading.
+        for cmd in [
+            "Remove-Item ./build -Recurse -Force",
+            "Remove-Item .\\target\\debug -Recurse",
+            "del /f /s /q .\\dist",
+            "rd /s /q C:\\projects\\app\\node_modules",
+        ] {
+            assert!(!dangerous(cmd), "false positive on `{cmd}`");
+        }
+    }
+
+    #[test]
+    fn a_word_containing_an_alias_is_not_a_delete() {
+        // The rules used to match "rd " and "-r " as bare substrings, so an
+        // ordinary word like "forward" tripped them.
+        assert!(!dangerous("echo forward -recurse -force"));
+        assert!(!dangerous("git log --grep 'ri ' -r "));
     }
 
     #[test]
