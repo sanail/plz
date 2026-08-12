@@ -67,18 +67,47 @@ fn run_task(cli: &Cli, task: &str) -> Result<()> {
         anyhow::bail!("the model returned no suggestions");
     }
 
-    if cli.json {
-        println!("{}", serde_json::to_string_pretty(&suggestions)?);
-        return Ok(());
-    }
-
-    if cli.dry_run {
-        print_suggestions(&suggestions);
+    // Before the picker: with these flags there is nothing to pick.
+    if print_only(cli, &suggestions)? {
         return Ok(());
     }
 
     let outcome = ui::select::select(&suggestions, buffer_supported(&ctx))?;
     handle_outcome(cli, &config, &ctx, &suggestions, outcome)
+}
+
+/// An output mode that prints the suggestions and stops.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PrintOnly {
+    /// `--json`
+    Json,
+    /// `--dry-run`
+    Plain,
+}
+
+/// Which print-and-stop mode the flags ask for, if any.
+fn print_only_mode(cli: &Cli) -> Option<PrintOnly> {
+    if cli.json {
+        Some(PrintOnly::Json)
+    } else if cli.dry_run {
+        Some(PrintOnly::Plain)
+    } else {
+        None
+    }
+}
+
+/// Print the suggestions if a flag asks for it; `true` means we are done.
+///
+/// Both modes have to be honoured in the interactive mode as well as the direct
+/// one: `--dry-run` is the flag people reach for precisely so that nothing runs,
+/// and it must not depend on how the suggestions were obtained.
+fn print_only(cli: &Cli, suggestions: &[Suggestion]) -> Result<bool> {
+    match print_only_mode(cli) {
+        Some(PrintOnly::Json) => println!("{}", serde_json::to_string_pretty(suggestions)?),
+        Some(PrintOnly::Plain) => print_suggestions(suggestions),
+        None => return Ok(false),
+    }
+    Ok(true)
 }
 
 /// Interactive mode: running plz with no arguments.
@@ -94,6 +123,11 @@ fn run_interactive(cli: &Cli) -> Result<()> {
         count,
         buffer_supported(&ctx),
     )?;
+
+    // A cancelled session has nothing to print, whatever the flags say.
+    if session.outcome != Outcome::Cancel && print_only(cli, &session.suggestions)? {
+        return Ok(());
+    }
 
     handle_outcome(cli, &config, &ctx, &session.suggestions, session.outcome)
 }
@@ -311,4 +345,51 @@ fn init_config() -> Result<()> {
         println!("Warning: no key set, neither in the config nor in the environment.");
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cli(args: &[&str]) -> Cli {
+        Cli::parse_from(args)
+    }
+
+    #[test]
+    fn dry_run_and_json_print_instead_of_running() {
+        assert_eq!(
+            print_only_mode(&cli(&["plz", "--json", "list files"])),
+            Some(PrintOnly::Json)
+        );
+        assert_eq!(
+            print_only_mode(&cli(&["plz", "--dry-run", "list files"])),
+            Some(PrintOnly::Plain)
+        );
+        assert_eq!(print_only_mode(&cli(&["plz", "list files"])), None);
+    }
+
+    #[test]
+    fn the_flags_also_apply_with_no_task_argument() {
+        // No task means interactive mode, which used to ignore both flags and
+        // run the chosen command anyway.
+        assert_eq!(
+            print_only_mode(&cli(&["plz", "--dry-run"])),
+            Some(PrintOnly::Plain)
+        );
+        assert_eq!(
+            print_only_mode(&cli(&["plz", "--json"])),
+            Some(PrintOnly::Json)
+        );
+        assert!(cli(&["plz", "--dry-run"]).task_text().is_none());
+    }
+
+    #[test]
+    fn json_wins_over_dry_run() {
+        // Both at once is a contradiction; --json is the machine-readable one,
+        // so it is the one that answers.
+        assert_eq!(
+            print_only_mode(&cli(&["plz", "--json", "--dry-run", "x"])),
+            Some(PrintOnly::Json)
+        );
+    }
 }
