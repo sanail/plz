@@ -264,8 +264,32 @@ fn draw(frame: &mut Frame, app: &App) {
     draw_hints(frame, app, areas[2]);
 }
 
+/// The tail of the query that fits in the input box, and the cursor's column
+/// within it.
+///
+/// Only the start can be scrolled away: the editor appends and backspaces, and
+/// offers no way to move the cursor into the middle of the text. One column is
+/// held back for the cursor itself, or it would sit on the border.
+///
+/// Counted in characters rather than display columns, like the rest of the UI.
+fn visible_query(query: &str, inner_width: u16) -> (String, u16) {
+    let room = (inner_width as usize).saturating_sub(1);
+    let length = query.chars().count();
+    let offset = length.saturating_sub(room);
+    (
+        query.chars().skip(offset).collect(),
+        (length - offset) as u16,
+    )
+}
+
 fn draw_query(frame: &mut Frame, app: &App, area: ratatui::layout::Rect) {
-    let input = Paragraph::new(app.query.as_str()).block(
+    // The width comes from the terminal and in degenerate cases (a freshly
+    // opened pty, a window a couple of columns wide) can be zero, so subtract
+    // with saturation rather than plain minus.
+    let inner_width = area.width.saturating_sub(2);
+    let (visible, cursor_offset) = visible_query(&app.query, inner_width);
+
+    let input = Paragraph::new(visible.as_str()).block(
         Block::default()
             .borders(Borders::ALL)
             .title(" What do you need to do? "),
@@ -275,11 +299,8 @@ fn draw_query(frame: &mut Frame, app: &App, area: ratatui::layout::Rect) {
     // The cursor is placed only while editing; otherwise it would blink over
     // the list.
     if matches!(app.screen, Screen::Editing) {
-        // The width comes from the terminal and in degenerate cases (a freshly
-        // opened pty, a window a couple of columns wide) can be zero, so
-        // subtract with saturation rather than plain minus.
-        let last_column = area.x + area.width.saturating_sub(2);
-        let cursor_x = area.x.saturating_add(1) + app.query.chars().count() as u16;
+        let last_column = area.x + inner_width;
+        let cursor_x = area.x.saturating_add(1) + cursor_offset;
         frame.set_cursor_position((cursor_x.min(last_column), area.y + 1));
     }
 }
@@ -372,4 +393,47 @@ fn draw_hints(frame: &mut Frame, app: &App, area: ratatui::layout::Rect) {
 
     let hints = Paragraph::new(text).style(Style::default().fg(Color::DarkGray));
     frame.render_widget(hints, area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_short_query_is_shown_whole() {
+        let (visible, cursor) = visible_query("find big files", 40);
+        assert_eq!(visible, "find big files");
+        assert_eq!(cursor, 14);
+    }
+
+    #[test]
+    fn a_long_query_scrolls_to_keep_the_end_in_view() {
+        // Typing past the right edge used to leave the user writing blind.
+        let query = "abcdefghijklmnopqrstuvwxyz";
+        let (visible, cursor) = visible_query(query, 10);
+        assert_eq!(visible, "rstuvwxyz");
+        assert_eq!(
+            visible.chars().count(),
+            9,
+            "one column is left for the cursor"
+        );
+        assert_eq!(cursor, 9);
+    }
+
+    #[test]
+    fn the_cursor_never_leaves_the_box() {
+        for width in 0..40u16 {
+            let (visible, cursor) = visible_query("a rather long query indeed", width);
+            assert!(cursor <= width, "cursor {cursor} past width {width}");
+            assert!(visible.chars().count() <= width as usize);
+        }
+    }
+
+    #[test]
+    fn scrolling_counts_characters_not_bytes() {
+        // Slicing these on bytes would both cut too much and panic mid-character.
+        let (visible, cursor) = visible_query("покажи занятое место на диске", 10);
+        assert_eq!(visible, " на диске");
+        assert_eq!(cursor, 9);
+    }
 }
