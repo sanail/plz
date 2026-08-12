@@ -1,5 +1,5 @@
 # plz wrapper for zsh. To install:
-#   echo 'eval "$(plz init zsh)"' >> ~/.zshrc
+#   echo 'eval "$(plz hook zsh)"' >> ~/.zshrc
 #
 # The function shares its name with the binary and shadows it: in zsh, functions
 # take precedence over commands found in PATH. The binary itself is called via

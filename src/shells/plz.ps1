@@ -1,5 +1,5 @@
 # plz wrapper for PowerShell. To install:
-#   plz init powershell >> $PROFILE
+#   plz hook powershell >> $PROFILE
 #
 # The function shadows the executable of the same name. To call the executable
 # rather than itself, it looks the file up explicitly as an Application — the

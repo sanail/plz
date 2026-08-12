@@ -1,6 +1,6 @@
 //! Running the chosen command.
 //!
-//! There are two paths. With the shell wrapper installed (`plz init <shell>`)
+//! There are two paths. With the shell wrapper installed (`plz hook <shell>`)
 //! we write the command to the file named by `PLZ_OUTPUT_FILE`, and the wrapper
 //! runs it in the current shell — so `cd`, `export` and venv activation work.
 //! Without the wrapper we spawn a child process: that works out of the box but

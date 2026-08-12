@@ -1,5 +1,5 @@
 # plz wrapper for bash. To install:
-#   echo 'eval "$(plz init bash)"' >> ~/.bashrc
+#   echo 'eval "$(plz hook bash)"' >> ~/.bashrc
 #
 # The function shadows the binary of the same name, which it calls via
 # `command plz`.

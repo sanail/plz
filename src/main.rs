@@ -36,7 +36,7 @@ fn run() -> Result<()> {
 
     match &cli.command {
         Some(Command::Config { action }) => run_config(action),
-        Some(Command::Init { shell }) => {
+        Some(Command::Hook { shell }) => {
             // The script goes to stdout, because it is fed to `eval "$(...)"`.
             print!("{}", integration::script(*shell));
             // The hint goes to stderr, or it would land inside that same eval.
@@ -150,10 +150,15 @@ fn execute(cli: &Cli, config: &Config, ctx: &Context, suggestion: &Suggestion) -
 
     let code = exec::run_in_child_shell(&ctx.shell, command)?;
     if changes_shell_state(command) {
+        // Name the shell only when a wrapper exists for it; otherwise the
+        // generic form, so the suggestion is always a line that works.
+        let hook = match integration::hook_arg(ctx.shell.kind) {
+            Some(arg) => format!("plz hook {arg}"),
+            None => "plz hook <shell>".to_string(),
+        };
         eprintln!(
             "Note: this command changes shell state but ran in a child process.\n\
-             Install the wrapper — `plz init {}` — to make such commands affect your current shell.",
-            ctx.shell.kind.label()
+             Install the wrapper — `{hook}` — to make such commands affect your current shell."
         );
     }
     // Pass the exit code outwards, or `plz "..." && next-step` would run the
@@ -220,7 +225,7 @@ fn print_environment(config: &Config) {
     if std::env::var_os("PLZ_OUTPUT_FILE").is_some() {
         println!("# Shell wrapper: active");
     } else {
-        println!("# Shell wrapper: not installed (see `plz init <shell>`)");
+        println!("# Shell wrapper: not installed (see `plz hook <shell>`)");
     }
 }
 

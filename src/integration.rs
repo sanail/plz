@@ -1,4 +1,4 @@
-//! Generating the shell wrappers (`plz init <shell>`).
+//! Generating the shell wrappers (`plz hook <shell>`).
 //!
 //! A wrapper exists for exactly one reason: to run the command in the *current*
 //! shell rather than a child process. Only then do `cd`, `export`, `source` and
@@ -6,13 +6,14 @@
 //! cannot hand its state back to its parent, which is an OS constraint.
 
 use crate::cli::Shell;
+use crate::context::ShellKind;
 
 const ZSH: &str = include_str!("shells/plz.zsh");
 const BASH: &str = include_str!("shells/plz.bash");
 const FISH: &str = include_str!("shells/plz.fish");
 const POWERSHELL: &str = include_str!("shells/plz.ps1");
 
-/// The text `plz init <shell>` prints to stdout.
+/// The text `plz hook <shell>` prints to stdout.
 pub fn script(shell: Shell) -> &'static str {
     match shell {
         Shell::Zsh => ZSH,
@@ -39,17 +40,32 @@ const CMD_EXPLANATION: &str = r#"@rem There is no wrapper for cmd.exe.
 @rem no effect; run those by hand. plz warns you when that happens.
 @rem
 @rem For the full experience, use PowerShell instead:
-@rem     plz init powershell >> $PROFILE
+@rem     plz hook powershell >> $PROFILE
 "#;
 
 /// How to install the wrapper. Printed to stderr so it stays out of `eval`.
 pub fn install_hint(shell: Shell) -> &'static str {
     match shell {
-        Shell::Zsh => "echo 'eval \"$(plz init zsh)\"' >> ~/.zshrc",
-        Shell::Bash => "echo 'eval \"$(plz init bash)\"' >> ~/.bashrc",
-        Shell::Fish => "plz init fish > ~/.config/fish/conf.d/plz.fish",
-        Shell::Powershell => "plz init powershell >> $PROFILE",
+        Shell::Zsh => "echo 'eval \"$(plz hook zsh)\"' >> ~/.zshrc",
+        Shell::Bash => "echo 'eval \"$(plz hook bash)\"' >> ~/.bashrc",
+        Shell::Fish => "plz hook fish > ~/.config/fish/conf.d/plz.fish",
+        Shell::Powershell => "plz hook powershell >> $PROFILE",
         Shell::Cmd => "a cmd.exe wrapper is not possible — see the note above",
+    }
+}
+
+/// The `plz hook` argument for a detected shell, if a wrapper exists for it.
+///
+/// The detected shell is a wider set than the wrapper covers, and its labels
+/// ("cmd.exe", "PowerShell") are meant for prose — suggesting them verbatim
+/// would produce a `plz hook` line that does not parse.
+pub fn hook_arg(kind: ShellKind) -> Option<&'static str> {
+    match kind {
+        ShellKind::Zsh => Some("zsh"),
+        ShellKind::Bash => Some("bash"),
+        ShellKind::Fish => Some("fish"),
+        ShellKind::PowerShell => Some("powershell"),
+        ShellKind::Nushell | ShellKind::Cmd | ShellKind::Posix | ShellKind::Other => None,
     }
 }
 
@@ -141,6 +157,29 @@ mod tests {
                 line.starts_with("@rem"),
                 "executable line in the placeholder: {line}"
             );
+        }
+    }
+
+    #[test]
+    fn hook_args_are_accepted_by_the_cli() {
+        // The suggestion is meant to be copy-pasted, so every value we hand out
+        // has to parse as the `plz hook <shell>` argument.
+        use clap::ValueEnum;
+        for kind in [
+            ShellKind::Zsh,
+            ShellKind::Bash,
+            ShellKind::Fish,
+            ShellKind::PowerShell,
+        ] {
+            let arg = hook_arg(kind).unwrap_or_else(|| panic!("{kind:?} has a wrapper"));
+            assert!(Shell::from_str(arg, true).is_ok(), "{arg}");
+        }
+    }
+
+    #[test]
+    fn shells_without_a_wrapper_get_no_hook_arg() {
+        for kind in [ShellKind::Nushell, ShellKind::Cmd, ShellKind::Posix] {
+            assert!(hook_arg(kind).is_none(), "{kind:?}");
         }
     }
 

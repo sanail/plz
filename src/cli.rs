@@ -43,14 +43,14 @@ pub enum Command {
     /// Print a shell wrapper so commands run in your current shell
     ///
     /// How to install it:
-    ///   zsh:        echo 'eval "$(plz init zsh)"' >> ~/.zshrc
-    ///   bash:       echo 'eval "$(plz init bash)"' >> ~/.bashrc
-    ///   fish:       plz init fish > ~/.config/fish/conf.d/plz.fish
-    ///   powershell: plz init powershell >> $PROFILE
+    ///   zsh:        echo 'eval "$(plz hook zsh)"' >> ~/.zshrc
+    ///   bash:       echo 'eval "$(plz hook bash)"' >> ~/.bashrc
+    ///   fish:       plz hook fish > ~/.config/fish/conf.d/plz.fish
+    ///   powershell: plz hook powershell >> $PROFILE
     // Without verbatim_doc_comment clap reflows the block into a single
     // paragraph, turning the aligned example list into an unreadable run-on.
     #[command(verbatim_doc_comment)]
-    Init {
+    Hook {
         /// The shell to generate a wrapper for
         shell: Shell,
     },

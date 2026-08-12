@@ -47,10 +47,10 @@ state. That is how processes work in the OS, not a shortcoming of the tool.
 To make those commands work, install the wrapper:
 
 ```sh
-echo 'eval "$(plz init zsh)"'  >> ~/.zshrc            # zsh
-echo 'eval "$(plz init bash)"' >> ~/.bashrc           # bash
-plz init fish > ~/.config/fish/conf.d/plz.fish        # fish
-plz init powershell >> $PROFILE                       # PowerShell
+echo 'eval "$(plz hook zsh)"'  >> ~/.zshrc            # zsh
+echo 'eval "$(plz hook bash)"' >> ~/.bashrc           # bash
+plz hook fish > ~/.config/fish/conf.d/plz.fish        # fish
+plz hook powershell >> $PROFILE                       # PowerShell
 ```
 
 The wrapper is a function with the same name as the binary. It shadows the
@@ -99,7 +99,7 @@ plz [OPTIONS] [TASK DESCRIPTION...]
       --json          print the suggestions as JSON (for scripts)
 ```
 
-Subcommands: `plz config init|path|show|edit`, `plz init <shell>`.
+Subcommands: `plz config init|path|show|edit`, `plz hook <shell>`.
 
 `plz config show` prints the configuration (with the key masked) plus the
 detected environment — the first thing to look at if commands come back for the
