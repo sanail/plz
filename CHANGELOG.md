@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The note that a command changed shell state but ran in a child process never
+  appeared in PowerShell. The check knew only the POSIX spellings (`cd`,
+  `export`), while the model answers `Set-Location ..` or `$env:FOO = 'bar'`, so
+  the run looked like `plz` had done nothing at all. Cmdlets, their aliases and
+  `Env:` assignments now count, and the comparison ignores casing.
+
 ## [0.1.1] - 2026-08-13
 
 ### Added

@@ -221,10 +221,37 @@ fn execute(cli: &Cli, config: &Config, ctx: &Context, suggestion: &Suggestion) -
 /// Such commands run to no effect in a child process, and without a note that
 /// looks like "the tool did nothing".
 fn changes_shell_state(command: &str) -> bool {
-    let first = command.split_whitespace().next().unwrap_or("");
+    // PowerShell is case-insensitive and the model varies the casing of its
+    // cmdlets; a POSIX command in capitals is not a real thing, so lowercasing
+    // for every shell costs nothing.
+    let first = command
+        .split_whitespace()
+        .next()
+        .unwrap_or("")
+        .to_ascii_lowercase();
+
+    // `$env:FOO = 'bar'` has no space before the colon, so the assignment
+    // arrives as a single token.
+    if first.starts_with("$env:") {
+        return true;
+    }
+    // Set-Item and its relatives touch session state only on the Env: drive;
+    // everywhere else they are ordinary file operations.
+    if matches!(
+        first.as_str(),
+        "set-item" | "new-item" | "remove-item" | "si" | "ni" | "ri"
+    ) {
+        return command.to_ascii_lowercase().contains("env:");
+    }
+
     matches!(
-        first,
-        "cd" | "export" | "source" | "." | "alias" | "unalias" | "set" | "unset" | "pushd" | "popd"
+        first.as_str(),
+        "cd" | "chdir" | "export" | "source" | "." | "alias" | "unalias" | "set" | "unset"
+            | "pushd" | "popd"
+            // PowerShell: the cmdlet form comes back from the model more often
+            // than `cd` does, and used to slip past this check unnoticed.
+            | "set-location" | "sl" | "push-location" | "pop-location"
+            | "set-variable" | "set-alias" | "new-alias"
     )
 }
 
@@ -397,6 +424,34 @@ mod tests {
             Some(PrintOnly::Json)
         );
         assert!(cli(&["plz", "--dry-run"]).task_text().is_none());
+    }
+
+    #[test]
+    fn state_changing_commands_are_recognised_in_every_shell() {
+        // The PowerShell spellings used to be missing, so the note about the
+        // child process never appeared there — the model answers with the
+        // cmdlet far more often than with `cd`.
+        for command in [
+            "cd ..",
+            "export FOO=bar",
+            "source ./venv/bin/activate",
+            "Set-Location ..",
+            "set-location C:\\src",
+            "sl ..",
+            "Push-Location ..",
+            "$env:FOO = 'bar'",
+            "Set-Item Env:FOO bar",
+        ] {
+            assert!(changes_shell_state(command), "{command}");
+        }
+        for command in [
+            "ls -la",
+            "Get-ChildItem",
+            "git status",
+            "Set-Item .\\file.txt x",
+        ] {
+            assert!(!changes_shell_state(command), "{command}");
+        }
     }
 
     #[test]
