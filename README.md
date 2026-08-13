@@ -21,29 +21,31 @@ your request.
 
 ## Installation
 
-macOS and Linux:
+Four routes to the same binary — take whichever fits your machine.
+
+### Homebrew (macOS, Linux)
 
 ```sh
 brew install sanail/tap/plz
 ```
 
+### Install script (macOS, Linux)
+
 ```sh
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/sanail/plz/releases/latest/download/plz-installer.sh | sh
 ```
 
-Windows:
+The script downloads a prebuilt binary, puts it in `~/.local/bin` and adds that
+directory to your `PATH`.
+
+### Install script (Windows)
 
 ```powershell
 powershell -c "irm https://github.com/sanail/plz/releases/latest/download/plz-installer.ps1 | iex"
 ```
 
-The installers download a prebuilt binary, put it in `~/.local/bin` and add that
-directory to your `PATH`; no Rust toolchain is involved. From source instead
-(needs Rust 1.85+):
-
-```sh
-cargo install --path .
-```
+The same thing for Windows: a prebuilt binary in `~/.local/bin`, with that
+directory added to your `PATH`.
 
 ### By hand
 
@@ -75,7 +77,10 @@ On Windows, unpack the zip, put `plz.exe` wherever you keep such things and add
 that directory to `PATH` through "Edit environment variables for your account".
 The binary is unsigned, so the first run may raise a SmartScreen warning.
 
-Then run the first-time setup:
+## Setting up the model
+
+However you installed it, the binary has no model to ask until you give it one.
+Run the first-time setup:
 
 ```sh
 plz config init
@@ -85,7 +90,14 @@ It asks for a provider, a model and an API key. Any endpoint compatible with the
 OpenAI Chat Completions API works; ready-made presets cover DeepSeek, OpenAI,
 OpenRouter, Ollama (local, no key) and a custom address.
 
+That is all `plz` needs to work. [Configuration](#configuration) below covers
+where the file lives, every field in it, and how to keep the key in an
+environment variable instead.
+
 ## Running in your current shell
+
+This step is optional — skip it unless you want `cd`, `export` and `source` to
+stick.
 
 `plz` works with no extra setup, but out of the box it runs the command in a
 **child** process. That means `cd`, `export`, `source` and venv activation will
@@ -272,6 +284,13 @@ carry project and client names; turn it off with `send_cwd = false`.
 
 ## Development
 
+None of the installation routes above involve a Rust toolchain — they all fetch
+a prebuilt binary. To build from source instead (needs Rust 1.85+):
+
+```sh
+cargo install --path .
+```
+
 ```sh
 cargo test                              # unit tests, no network needed
 cargo clippy --all-targets -- -D warnings
@@ -280,11 +299,6 @@ cargo fmt --check
 
 Builds and tests on macOS, Linux and Windows. TLS is `rustls`, so no system
 OpenSSL is needed to build on any of them.
-
-English is the project language: code, comments, messages, prompts and docs are
-all written in English. Interface translations will come with i18n later; today
-the only language that varies is the one the model explains commands in, which
-follows your request.
 
 ## License
 
