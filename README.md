@@ -17,7 +17,8 @@ Windows. So `plz` tells the model which OS, OS version, architecture and shell
 it was launched from, and gets back a command that runs unedited.
 
 Ask in any language you like: `plz` writes each explanation in the language of
-your request.
+your request, and falls back to English when the request is too short or too
+neutral to tell.
 
 ## Installation
 

@@ -40,7 +40,9 @@ pub fn system_prompt(ctx: &Context, count: usize) -> String {
             be installed, say so in the explanation.\n\
          4. Do not wrap commands in markdown and do not prefix them with `$`.\n\
          5. Keep each explanation to one short phrase, and write it in the same \
-            language the task was written in.\n\
+            language the task was written in. If that language is not obvious — \
+            a short task, bare command names, or mixed languages — write the \
+            explanation in English.\n\
          6. Reply with a JSON object ONLY, with no prose around it.\n\n",
         count = count,
         shell = ctx.shell.kind.label(),
@@ -235,8 +237,11 @@ mod tests {
     fn system_prompt_asks_for_the_task_language() {
         // Non-English users should get explanations they can actually read,
         // and the model handles that without any i18n machinery on our side.
+        // Short English tasks read as language-neutral, though, so the prompt
+        // names English explicitly instead of letting the model pick at random.
         let prompt = system_prompt(&ctx(ShellKind::Zsh), 3);
         assert!(prompt.contains("same language the task was written in"));
+        assert!(prompt.contains("explanation in English"));
     }
 
     #[test]
