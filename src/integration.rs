@@ -161,7 +161,11 @@ mod tests {
     fn buffer_uses_the_native_mechanism_of_each_shell() {
         assert!(script(Shell::Zsh).contains("print -z"));
         assert!(script(Shell::Fish).contains("commandline -r"));
-        assert!(script(Shell::Powershell).contains("PSConsoleReadLine]::Insert"));
+        // PowerShell's editing buffer is cleared at the start of every ReadLine,
+        // so Insert called from the wrapper writes text that is thrown away a
+        // moment later. History is the mechanism that survives the prompt.
+        assert!(!script(Shell::Powershell).contains("PSConsoleReadLine]::Insert"));
+        assert!(script(Shell::Powershell).contains("Up arrow"));
     }
 
     #[test]

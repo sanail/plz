@@ -38,8 +38,14 @@ function plz {
                     Invoke-Expression $commandText
                 }
                 'buffer' {
-                    # Insert it into the prompt buffer: visible and editable.
-                    [Microsoft.PowerShell.PSConsoleReadLine]::Insert($commandText)
+                    # PSReadLine's editing buffer cannot be reached from here:
+                    # this function runs after ReadLine has returned, and the
+                    # next ReadLine clears the buffer before drawing the prompt,
+                    # so anything inserted into it is lost. History does survive
+                    # that boundary, which leaves the command one arrow-up away.
+                    Write-Host $commandText
+                    [Microsoft.PowerShell.PSConsoleReadLine]::AddToHistory($commandText)
+                    Write-Host 'Press the Up arrow to recall and edit it.'
                 }
             }
         }

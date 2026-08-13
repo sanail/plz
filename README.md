@@ -183,13 +183,15 @@ query, `Ctrl+N` starts a new one without leaving the mode.
 | `1`–`9` | pick a suggestion and run it immediately |
 | `↑`/`↓`, `k`/`j` | move through the list |
 | `Enter` | run the selected suggestion |
-| `Tab` / `e` | insert into the prompt for editing (or copy) |
+| `Tab` / `e` | hand the command over for editing (or copy) |
 | `c` | copy the command to the clipboard and exit |
 | `Esc` / `q` / `Ctrl+C` / `Ctrl+D` | cancel, exiting with code 130 |
 
-`Tab` inserts the command into the prompt only where the shell supports it —
-zsh (`print -z`), fish (`commandline -r`) and PowerShell
-(`PSConsoleReadLine::Insert`) — and only with the wrapper installed. Everywhere
+`Tab` puts the command in front of you unrun, and it needs the wrapper installed.
+zsh (`print -z`) and fish (`commandline -r`) drop it straight into the prompt.
+PowerShell cannot: PSReadLine clears its editing buffer at the start of every
+prompt, so nothing written there from outside its own read loop survives — the
+command goes into the history instead, and `↑` recalls it for editing. Everywhere
 else that key copies the command instead.
 
 ## Flags

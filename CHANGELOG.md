@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `export`), while the model answers `Set-Location ..` or `$env:FOO = 'bar'`, so
   the run looked like `plz` had done nothing at all. Cmdlets, their aliases and
   `Env:` assignments now count, and the comparison ignores casing.
+- `Tab` in PowerShell glued the command onto the line just submitted —
+  `plz go to parent foldercd ..` — and then lost it: `PSConsoleReadLine::Insert`
+  writes into a buffer the next prompt clears. The command now goes into
+  PSReadLine's history, one `↑` away from editing.
 
 ## [0.1.1] - 2026-08-13
 

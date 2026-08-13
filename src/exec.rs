@@ -46,9 +46,12 @@ pub fn integration_active() -> bool {
 
 /// Whether the shell can insert a command into its prompt buffer.
 ///
-/// zsh has `print -z`, fish has `commandline -r`, PowerShell has
-/// `PSConsoleReadLine::Insert`. bash has no real equivalent, and neither does
-/// cmd.exe, so there `Tab` degrades into copying to the clipboard.
+/// zsh has `print -z` and fish has `commandline -r`. PowerShell has nothing that
+/// works from outside PSReadLine's own read loop, so its wrapper puts the command
+/// into the history instead, where one arrow-up recalls it for editing — still an
+/// edit rather than a copy, which is what this flag decides. bash has no
+/// equivalent of either, and neither does cmd.exe, so there `Tab` degrades into
+/// copying to the clipboard.
 pub fn supports_buffer(shell: ShellKind) -> bool {
     matches!(
         shell,
