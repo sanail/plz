@@ -301,6 +301,8 @@ cargo fmt --check
 Builds and tests on macOS, Linux and Windows. TLS is `rustls`, so no system
 OpenSSL is needed to build on any of them.
 
+What changed between versions is in [CHANGELOG.md](CHANGELOG.md).
+
 ## License
 
 MIT
