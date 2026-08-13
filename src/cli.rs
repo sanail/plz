@@ -49,17 +49,23 @@ pub enum Command {
 
     /// Print a shell wrapper so commands run in your current shell
     ///
-    /// How to install it:
+    /// `plz hook <shell> --install` adds the line for you and asks before it
+    /// writes anything. To do it by hand:
     ///   zsh:        echo 'eval "$(plz hook zsh)"' >> ~/.zshrc
     ///   bash:       echo 'eval "$(plz hook bash)"' >> ~/.bashrc
-    ///   fish:       plz hook fish > ~/.config/fish/conf.d/plz.fish
-    ///   powershell: plz hook powershell >> $PROFILE
+    ///   fish:       echo 'plz hook fish | source' > ~/.config/fish/conf.d/plz.fish
+    ///   powershell: Add-Content $PROFILE 'plz hook powershell | Out-String | Invoke-Expression'
     // Without verbatim_doc_comment clap reflows the block into a single
     // paragraph, turning the aligned example list into an unreadable run-on.
     #[command(verbatim_doc_comment)]
     Hook {
         /// The shell to generate a wrapper for
         shell: Shell,
+
+        /// Add the line to the shell's startup file instead of printing the
+        /// script. Asks first; --yes answers for you
+        #[arg(long)]
+        install: bool,
     },
 }
 
@@ -83,6 +89,20 @@ pub enum Shell {
     #[value(alias = "pwsh")]
     Powershell,
     Cmd,
+}
+
+impl Shell {
+    /// The spelling `plz hook <shell>` accepts, for messages that hand the user
+    /// a command to run. A test keeps it in step with what clap parses.
+    pub fn arg(self) -> &'static str {
+        match self {
+            Self::Zsh => "zsh",
+            Self::Bash => "bash",
+            Self::Fish => "fish",
+            Self::Powershell => "powershell",
+            Self::Cmd => "cmd",
+        }
+    }
 }
 
 impl Cli {
@@ -152,5 +172,44 @@ mod tests {
             Some("config nginx")
         );
         assert!(Cli::try_parse_from(["plz", "config", "nginx"]).is_err());
+    }
+
+    #[test]
+    fn every_shell_arg_is_one_the_parser_accepts() {
+        // These strings are handed to the user to type back, so a rename that
+        // misses one has to fail here rather than in their terminal.
+        for shell in [
+            Shell::Zsh,
+            Shell::Bash,
+            Shell::Fish,
+            Shell::Powershell,
+            Shell::Cmd,
+        ] {
+            let parsed = parse(&["plz", "hook", shell.arg()]);
+            assert!(
+                matches!(parsed.command, Some(Command::Hook { shell: got, .. }) if got == shell),
+                "{shell:?} does not round-trip through `{}`",
+                shell.arg()
+            );
+        }
+    }
+
+    #[test]
+    fn the_hook_subcommand_takes_an_optional_install_flag() {
+        let plain = parse(&["plz", "hook", "powershell"]);
+        assert!(matches!(
+            plain.command,
+            Some(Command::Hook {
+                shell: Shell::Powershell,
+                install: false
+            })
+        ));
+
+        let installing = parse(&["plz", "-y", "hook", "powershell", "--install"]);
+        assert!(installing.yes);
+        assert!(matches!(
+            installing.command,
+            Some(Command::Hook { install: true, .. })
+        ));
     }
 }

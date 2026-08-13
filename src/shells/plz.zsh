@@ -1,4 +1,6 @@
 # plz wrapper for zsh. To install:
+#   plz hook zsh --install
+# or by hand:
 #   echo 'eval "$(plz hook zsh)"' >> ~/.zshrc
 #
 # The function shares its name with the binary and shadows it: in zsh, functions

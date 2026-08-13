@@ -1,5 +1,7 @@
 # plz wrapper for fish. To install:
-#   plz hook fish > ~/.config/fish/conf.d/plz.fish
+#   plz hook fish --install
+# or by hand:
+#   echo 'plz hook fish | source' > ~/.config/fish/conf.d/plz.fish
 #
 # The function shadows the binary of the same name, which it calls via
 # `command plz`.

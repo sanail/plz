@@ -4,6 +4,7 @@ mod config;
 mod context;
 mod exec;
 mod input;
+mod install;
 mod integration;
 mod prompt;
 mod provider;
@@ -38,12 +39,22 @@ fn run() -> Result<()> {
 
     match &cli.command {
         Some(Command::Config { action }) => run_config(action),
-        Some(Command::Hook { shell }) => {
+        Some(Command::Hook { shell, install }) => {
+            if *install {
+                return install::run(*shell, cli.yes);
+            }
             // The script goes to stdout, because it is fed to `eval "$(...)"`.
             print!("{}", integration::script(*shell));
             // The hint goes to stderr, or it would land inside that same eval.
-            if std::io::stderr().is_terminal() {
+            // Gated on *stdout*: a redirected stdout means the output is being
+            // consumed — by `eval`, by `Invoke-Expression`, by a file — and the
+            // startup files hold exactly such a line, so a hint keyed on stderr
+            // prints on every shell start.
+            if std::io::stdout().is_terminal() {
                 eprintln!("\n# To install: {}", integration::install_hint(*shell));
+                if integration::startup_line(*shell).is_some() {
+                    eprintln!("# Or let plz do it: plz hook {} --install", shell.arg());
+                }
             }
             Ok(())
         }
@@ -192,8 +203,8 @@ fn execute(cli: &Cli, config: &Config, ctx: &Context, suggestion: &Suggestion) -
         // Name the shell only when a wrapper exists for it; otherwise the
         // generic form, so the suggestion is always a line that works.
         let hook = match integration::hook_arg(ctx.shell.kind) {
-            Some(arg) => format!("plz hook {arg}"),
-            None => "plz hook <shell>".to_string(),
+            Some(arg) => format!("plz hook {arg} --install"),
+            None => "plz hook <shell> --install".to_string(),
         };
         eprintln!(
             "Note: this command changes shell state but ran in a child process.\n\
@@ -264,7 +275,7 @@ fn print_environment(config: &Config) {
     if std::env::var_os("PLZ_OUTPUT_FILE").is_some() {
         println!("# Shell wrapper: active");
     } else {
-        println!("# Shell wrapper: not installed (see `plz hook <shell>`)");
+        println!("# Shell wrapper: not installed (run `plz hook <shell> --install`)");
     }
 }
 

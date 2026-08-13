@@ -95,11 +95,30 @@ state. That is how processes work in the OS, not a shortcoming of the tool.
 To make those commands work, install the wrapper:
 
 ```sh
-echo 'eval "$(plz hook zsh)"'  >> ~/.zshrc            # zsh
-echo 'eval "$(plz hook bash)"' >> ~/.bashrc           # bash
-plz hook fish > ~/.config/fish/conf.d/plz.fish        # fish
-plz hook powershell >> $PROFILE                       # PowerShell
+plz hook zsh --install
+plz hook bash --install
+plz hook fish --install
+plz hook powershell --install
 ```
+
+It shows the file and the line, asks, and writes nothing unless you answer `y` —
+a refusal does not even create the file. `plz -y hook <shell> --install` answers
+for you, for scripted setups. By hand it is one line:
+
+```sh
+echo 'eval "$(plz hook zsh)"'  >> ~/.zshrc                       # zsh
+echo 'eval "$(plz hook bash)"' >> ~/.bashrc                      # bash
+echo 'plz hook fish | source' > ~/.config/fish/conf.d/plz.fish   # fish
+```
+
+```powershell
+Add-Content $PROFILE 'plz hook powershell | Out-String | Invoke-Expression'
+```
+
+The line calls the binary rather than holding a copy of the script, so the
+wrapper is regenerated at every shell start and follows the binary through
+upgrades. `Out-String` is what joins the script back into one string for
+PowerShell; without it `Invoke-Expression` sees only the first line.
 
 The wrapper is a function with the same name as the binary. It shadows the
 binary in PATH, receives the chosen command through a temporary file, and runs
@@ -109,6 +128,31 @@ is no recursion.
 There is no wrapper for `cmd.exe`: it has no functions, and `doskey` macros can
 neither branch nor read a file. There `plz` runs in child-process mode and warns
 you when the chosen command changes session state.
+
+### PowerShell: the execution policy
+
+On Windows the default execution policy is `Restricted`, which means PowerShell
+refuses to run *any* `.ps1` file — including your own `$PROFILE`. The line above
+lands in the profile and then never runs, with no hint as to why beyond an error
+at startup. Allow local scripts once, for your user only:
+
+```powershell
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+This needs no administrator rights and writes to your own registry key. Under
+`RemoteSigned` scripts you wrote or created locally run, while scripts downloaded
+from the internet still need a signature — that is the setting Microsoft ships as
+the default on Windows Server, and the one every profile-based tool (starship,
+zoxide, oh-my-posh) asks for.
+
+`plz hook powershell --install` checks the policy after writing the line and
+offers to run that command for you. As with the profile itself, it does nothing
+without a `y`.
+
+Windows PowerShell 5.1 and PowerShell 7 keep separate profiles *and* separate
+policy settings, so run `--install` from the one you actually use — it asks that
+shell where its `$PROFILE` is instead of guessing.
 
 ## Modes
 
@@ -163,7 +207,7 @@ plz "config nginx as a reverse proxy"
 plz -- config nginx as a reverse proxy
 ```
 
-Subcommands: `plz config init|path|show|edit`, `plz hook <shell>`.
+Subcommands: `plz config init|path|show|edit`, `plz hook <shell> [--install]`.
 
 `plz config show` prints the configuration (with the key masked) plus the
 detected environment — the first thing to look at if commands come back for the

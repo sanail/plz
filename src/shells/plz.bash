@@ -1,4 +1,6 @@
 # plz wrapper for bash. To install:
+#   plz hook bash --install
+# or by hand:
 #   echo 'eval "$(plz hook bash)"' >> ~/.bashrc
 #
 # The function shadows the binary of the same name, which it calls via

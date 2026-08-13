@@ -13,6 +13,24 @@ const BASH: &str = include_str!("shells/plz.bash");
 const FISH: &str = include_str!("shells/plz.fish");
 const POWERSHELL: &str = include_str!("shells/plz.ps1");
 
+/// The single line that goes into the shell's startup file.
+///
+/// It calls the binary rather than embedding the script, so the wrapper is
+/// regenerated at every shell start and follows the binary through upgrades. A
+/// copy pasted into the startup file would go stale instead.
+pub fn startup_line(shell: Shell) -> Option<&'static str> {
+    match shell {
+        Shell::Zsh => Some(r#"eval "$(plz hook zsh)""#),
+        Shell::Bash => Some(r#"eval "$(plz hook bash)""#),
+        Shell::Fish => Some("plz hook fish | source"),
+        // Out-String is not optional: without it each line of the script
+        // arrives as a separate pipeline object and Invoke-Expression sees
+        // only the first one.
+        Shell::Powershell => Some("plz hook powershell | Out-String | Invoke-Expression"),
+        Shell::Cmd => None,
+    }
+}
+
 /// The text `plz hook <shell>` prints to stdout.
 pub fn script(shell: Shell) -> &'static str {
     match shell {
@@ -40,16 +58,21 @@ const CMD_EXPLANATION: &str = r#"@rem There is no wrapper for cmd.exe.
 @rem no effect; run those by hand. plz warns you when that happens.
 @rem
 @rem For the full experience, use PowerShell instead:
-@rem     plz hook powershell >> $PROFILE
+@rem     plz hook powershell --install
 "#;
 
-/// How to install the wrapper. Printed to stderr so it stays out of `eval`.
+/// How to add the startup line by hand. Printed to stderr so it stays out of
+/// `eval`; `plz hook <shell> --install` does the same thing without the typing.
 pub fn install_hint(shell: Shell) -> &'static str {
     match shell {
         Shell::Zsh => "echo 'eval \"$(plz hook zsh)\"' >> ~/.zshrc",
         Shell::Bash => "echo 'eval \"$(plz hook bash)\"' >> ~/.bashrc",
-        Shell::Fish => "plz hook fish > ~/.config/fish/conf.d/plz.fish",
-        Shell::Powershell => "plz hook powershell >> $PROFILE",
+        Shell::Fish => "echo 'plz hook fish | source' > ~/.config/fish/conf.d/plz.fish",
+        // Add-Content rather than `>>`: in Windows PowerShell 5.1 the redirect
+        // writes UTF-16LE, which corrupts an existing UTF-8 profile.
+        Shell::Powershell => {
+            "Add-Content $PROFILE 'plz hook powershell | Out-String | Invoke-Expression'"
+        }
         Shell::Cmd => "a cmd.exe wrapper is not possible — see the note above",
     }
 }
@@ -189,5 +212,51 @@ mod tests {
         assert!(install_hint(Shell::Bash).contains(".bashrc"));
         assert!(install_hint(Shell::Fish).contains("conf.d"));
         assert!(install_hint(Shell::Powershell).contains("PROFILE"));
+    }
+
+    #[test]
+    fn startup_lines_call_the_binary_rather_than_embedding_the_script() {
+        // This is what makes the wrapper follow the binary through upgrades:
+        // an embedded copy is a snapshot and goes stale.
+        for (shell, arg) in [
+            (Shell::Zsh, "zsh"),
+            (Shell::Bash, "bash"),
+            (Shell::Fish, "fish"),
+            (Shell::Powershell, "powershell"),
+        ] {
+            let line = startup_line(shell).unwrap_or_else(|| panic!("{shell:?} has no line"));
+            assert!(
+                line.contains(&format!("plz hook {arg}")),
+                "{shell:?}: {line}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_powershell_line_pipes_through_out_string() {
+        // Without Out-String each line of the script is a separate pipeline
+        // object and Invoke-Expression evaluates only the first.
+        let line = startup_line(Shell::Powershell).unwrap();
+        assert!(line.contains("Out-String"), "{line}");
+        assert!(line.contains("Invoke-Expression"), "{line}");
+    }
+
+    #[test]
+    fn cmd_has_no_startup_line() {
+        assert!(startup_line(Shell::Cmd).is_none());
+    }
+
+    #[test]
+    fn install_hints_write_the_same_line_that_install_does() {
+        // Otherwise the documented command and `--install` drift apart and one
+        // of the two silently stops working.
+        for shell in REAL_SHELLS {
+            let line = startup_line(*shell).unwrap();
+            assert!(
+                install_hint(*shell).contains(line),
+                "{shell:?}: hint `{}` does not contain `{line}`",
+                install_hint(*shell)
+            );
+        }
     }
 }
