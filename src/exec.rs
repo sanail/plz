@@ -6,6 +6,7 @@
 //! Without the wrapper we spawn a child process: that works out of the box but
 //! cannot change the parent shell's state, which is how processes work in the OS.
 
+use std::ffi::OsStr;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -96,14 +97,34 @@ pub fn parse_protocol(payload: &str) -> Option<(Verb, String)> {
 /// Returns the command's exit code so that `plz` exits with the same one:
 /// otherwise `plz "..." && next-step` would behave incorrectly.
 pub fn run_in_child_shell(shell: &Shell, command: &str) -> Result<i32> {
-    let (program, args) = child_shell_invocation(shell.kind);
+    let (name, args) = child_shell_invocation(shell.kind);
+
+    // Prefer the binary we were actually launched from. `pwsh` and `powershell`
+    // are different shells, and on Windows a Cygwin, Git Bash and MSYS2 bash can
+    // all sit in the same PATH while behaving differently.
+    let program: &OsStr = match &shell.path {
+        Some(path) => path.as_os_str(),
+        None => name.as_ref(),
+    };
 
     let mut cmd = Command::new(program);
+    // Windows only, and only worth it there. Rust resolves a bare program name
+    // itself, and it reads the system directory *before* the inherited PATH —
+    // there `bash.exe` is WSL's launcher rather than a POSIX shell, so a Cygwin
+    // user's command ends up in a WSL distribution. Naming PATH explicitly moves
+    // it to the front of that search; the value is the one we inherited, so only
+    // the lookup order changes. On Unix the order is already right, and a
+    // changed PATH would cost std its `posix_spawn` fast path.
+    if cfg!(windows) {
+        if let Some(path) = std::env::var_os("PATH") {
+            cmd.env("PATH", path);
+        }
+    }
     cmd.args(args).arg(command);
 
     let status = cmd
         .status()
-        .with_context(|| format!("could not launch `{program}`"))?;
+        .with_context(|| format!("could not launch `{}`", program.to_string_lossy()))?;
 
     // A signal (Ctrl+C inside the command) yields no exit code; report the
     // conventional 130, which is what shells themselves do.
@@ -216,8 +237,47 @@ mod tests {
             kind: ShellKind::Posix,
             name: "sh".into(),
             environment: None,
+            path: None,
         };
         assert_eq!(run_in_child_shell(&shell, "exit 0").unwrap(), 0);
         assert_eq!(run_in_child_shell(&shell, "exit 7").unwrap(), 7);
+    }
+
+    #[test]
+    fn whatever_we_detect_can_actually_run_a_command() {
+        // The end-to-end invariant: detection and launching have to agree, or
+        // every run of plz fails on this machine. They can disagree — busybox
+        // reports the name `sh` and the executable `/bin/busybox`, and running
+        // the latter directly exits 127 — so assert it rather than assume it.
+        let shell = crate::context::detect_shell();
+        if shell.kind != ShellKind::Other {
+            assert_eq!(run_in_child_shell(&shell, "exit 7").unwrap(), 7);
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn a_known_shell_path_is_used_instead_of_the_name() {
+        // The name would resolve through PATH; the path must win, since on
+        // Windows that is the difference between Cygwin's bash and WSL's.
+        let shell = Shell {
+            kind: ShellKind::Posix,
+            name: "sh".into(),
+            environment: None,
+            path: Some("/bin/sh".into()),
+        };
+        assert_eq!(run_in_child_shell(&shell, "exit 7").unwrap(), 7);
+    }
+
+    #[test]
+    fn an_unusable_shell_path_reports_the_path_it_tried() {
+        let shell = Shell {
+            kind: ShellKind::Posix,
+            name: "sh".into(),
+            environment: None,
+            path: Some("/definitely/not/a/shell".into()),
+        };
+        let error = run_in_child_shell(&shell, "exit 0").unwrap_err();
+        assert!(error.to_string().contains("/definitely/not/a/shell"));
     }
 }

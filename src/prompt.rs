@@ -218,6 +218,7 @@ mod tests {
                 kind,
                 name: kind.label().into(),
                 environment: None,
+                path: None,
             },
             cwd: Some("/tmp/project".into()),
         }

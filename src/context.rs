@@ -1,4 +1,5 @@
 use std::fmt;
+use std::path::{Path, PathBuf};
 
 /// The shell family. It decides both the command syntax we ask the model for
 /// and how we later run the chosen command.
@@ -65,6 +66,11 @@ pub struct Shell {
     pub name: String,
     /// A qualifier such as "MSYS2/Git Bash"; it changes paths and quoting
     pub environment: Option<String>,
+    /// The absolute path of the shell binary, when we know it. Used to run the
+    /// very shell plz was launched from instead of whatever the PATH resolves
+    /// to: on Windows several bashes (Cygwin, Git Bash, MSYS2) can share a
+    /// PATH and they are not interchangeable.
+    pub path: Option<PathBuf>,
 }
 
 impl Shell {
@@ -73,6 +79,7 @@ impl Shell {
             kind,
             name: name.into(),
             environment: None,
+            path: None,
         }
     }
 
@@ -81,6 +88,7 @@ impl Shell {
             kind: ShellKind::Other,
             name: "unknown".into(),
             environment: None,
+            path: None,
         }
     }
 }
@@ -207,14 +215,53 @@ fn shell_from_process_tree() -> Option<Shell> {
         let parent_process = system.process(parent)?;
         let name = parent_process.name().to_string_lossy().to_string();
         if let Some(kind) = ShellKind::from_program_name(&name) {
-            return Some(Shell::new(kind, name));
+            let mut shell = Shell::new(kind, name);
+            shell.path = shell_exe_path(&mut system, parent, kind);
+            return Some(shell);
         }
         pid = parent;
     }
     None
 }
 
+/// The absolute path of a shell process, when we can trust it.
+///
+/// Asked for a single pid rather than in the walk above: filling in the exe
+/// path costs an extra system call per process, and the walk itself needs only
+/// names. A path we cannot vouch for is reported as `None` — the caller then
+/// falls back to a PATH lookup, which is how plz always worked.
+fn shell_exe_path(
+    system: &mut sysinfo::System,
+    pid: sysinfo::Pid,
+    kind: ShellKind,
+) -> Option<PathBuf> {
+    use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, UpdateKind};
+
+    system.refresh_processes_specifics(
+        ProcessesToUpdate::Some(&[pid]),
+        true,
+        ProcessRefreshKind::nothing().with_exe(UpdateKind::OnlyIfNotSet),
+    );
+    let path = system.process(pid)?.exe()?;
+    (path_matches_kind(path, kind) && path.is_file()).then(|| path.to_path_buf())
+}
+
+/// Whether an executable can stand in for the shell we recognised by name.
+///
+/// The process name and the executable need not agree. A multi-call binary
+/// such as busybox runs under the name `sh` but lives at `/bin/busybox`, and it
+/// picks its applet from `argv[0]` — so `/bin/busybox -c ...` fails where
+/// `sh -c ...` works. Bash running as `sh` is the same trap in reverse: we told
+/// the model "sh", and launching `/bin/bash` directly would quietly accept
+/// syntax the real shell rejects. In both cases the plain name is the safe one.
+fn path_matches_kind(path: &Path, kind: ShellKind) -> bool {
+    ShellKind::from_program_name(&path.to_string_lossy()) == Some(kind)
+}
+
 fn shell_from_env() -> Option<Shell> {
+    // These sources never set `Shell::path`: under Cygwin and MSYS2 `$SHELL`
+    // holds a POSIX path (`/bin/bash`) that a native Windows process cannot
+    // execute, so only the process tree gives one we can hand to the OS.
     if let Ok(shell) = std::env::var("SHELL") {
         if let Some(kind) = ShellKind::from_program_name(&shell) {
             return Some(Shell::new(kind, shell));
@@ -335,6 +382,57 @@ mod tests {
         assert!(!ctx.os.is_empty());
         assert!(!ctx.arch.is_empty());
         assert!(ctx.cwd.is_none(), "send_cwd=false must not send the path");
+    }
+
+    #[test]
+    fn a_multicall_binary_is_not_mistaken_for_the_shell_it_reports() {
+        // Alpine's `sh` is busybox, which dispatches on argv[0]: launching
+        // `/bin/busybox -c ...` fails where `sh -c ...` works.
+        assert!(!path_matches_kind(
+            Path::new("/bin/busybox"),
+            ShellKind::Posix
+        ));
+        // Bash running under the name `sh` would accept syntax that the shell
+        // we described to the model does not.
+        assert!(!path_matches_kind(Path::new("/bin/bash"), ShellKind::Posix));
+        // A path Linux marks as replaced mid-session is no longer executable.
+        assert!(!path_matches_kind(
+            Path::new("/usr/bin/zsh (deleted)"),
+            ShellKind::Zsh
+        ));
+    }
+
+    #[test]
+    fn an_ordinary_shell_path_is_kept() {
+        // Debian's `sh` is dash: a different name, but a real shell.
+        assert!(path_matches_kind(
+            Path::new("/usr/bin/dash"),
+            ShellKind::Posix
+        ));
+        assert!(path_matches_kind(
+            Path::new("/opt/homebrew/bin/fish"),
+            ShellKind::Fish
+        ));
+        assert!(path_matches_kind(
+            Path::new(r"C:\cygwin64\bin\bash.exe"),
+            ShellKind::Bash
+        ));
+        // pwsh and powershell share a kind, and the same arguments.
+        assert!(path_matches_kind(
+            Path::new(r"C:\Program Files\PowerShell\7\pwsh.exe"),
+            ShellKind::PowerShell
+        ));
+    }
+
+    #[test]
+    fn a_detected_shell_path_is_executable() {
+        // Whatever the test runner's parent turns out to be, a path we report
+        // must be one we can actually hand to the OS — exec.rs launches it
+        // directly instead of searching the PATH.
+        if let Some(path) = detect_shell().path {
+            assert!(path.is_file(), "{} is not a file", path.display());
+            assert!(path.is_absolute(), "{} is not absolute", path.display());
+        }
     }
 
     #[test]
