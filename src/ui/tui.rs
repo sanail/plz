@@ -17,6 +17,7 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
 use ratatui::{Frame, Terminal};
+use rust_i18n::t;
 
 use crate::context::Context;
 use crate::provider::Provider;
@@ -66,10 +67,7 @@ pub fn run(
     buffer_supported: bool,
 ) -> Result<Session> {
     if !io::stderr().is_terminal() {
-        anyhow::bail!(
-            "interactive mode needs a terminal.\n\
-             Pass the task as an argument instead: plz \"describe your task\""
-        );
+        anyhow::bail!("{}", t!("tui.needs_a_terminal"));
     }
 
     // Drawn to stderr: stdout stays clean for `--json` and pipes.
@@ -127,7 +125,7 @@ fn event_loop(
             match rx.try_recv() {
                 Ok(Ok(suggestions)) if suggestions.is_empty() => {
                     app.screen = Screen::Failed {
-                        message: "The model returned no suggestions.".into(),
+                        message: t!("tui.no_suggestions").into_owned(),
                     };
                 }
                 Ok(Ok(suggestions)) => {
@@ -142,7 +140,7 @@ fn event_loop(
                 Err(TryRecvError::Empty) => {}
                 Err(TryRecvError::Disconnected) => {
                     app.screen = Screen::Failed {
-                        message: "the background request was interrupted".into(),
+                        message: t!("tui.request_interrupted").into_owned(),
                     };
                 }
             }
@@ -328,7 +326,7 @@ fn draw_query(frame: &mut Frame, app: &mut App, area: ratatui::layout::Rect) {
     let input = Paragraph::new(visible.as_str()).block(
         Block::default()
             .borders(Borders::ALL)
-            .title(" What do you need to do? "),
+            .title(t!("tui.query_title").into_owned()),
     );
     frame.render_widget(input, area);
 
@@ -344,7 +342,7 @@ fn draw_query(frame: &mut Frame, app: &mut App, area: ratatui::layout::Rect) {
 fn draw_body(frame: &mut Frame, app: &App, area: ratatui::layout::Rect) {
     match &app.screen {
         Screen::Editing => {
-            let hint = Paragraph::new("Describe your task in plain language and press Enter.")
+            let hint = Paragraph::new(t!("tui.editing_hint").into_owned())
                 .style(Style::default().fg(Color::DarkGray))
                 .block(Block::default().borders(Borders::ALL));
             frame.render_widget(hint, area);
@@ -354,9 +352,9 @@ fn draw_body(frame: &mut Frame, app: &App, area: ratatui::layout::Rect) {
             let spinner = SPINNER[app.spinner % SPINNER.len()];
             let seconds = started.elapsed().as_secs();
             let text = if seconds >= 3 {
-                format!("{spinner} Thinking… ({seconds}s)")
+                t!("tui.thinking_seconds", spinner = spinner, seconds = seconds).into_owned()
             } else {
-                format!("{spinner} Thinking…")
+                t!("tui.thinking", spinner = spinner).into_owned()
             };
             let waiting = Paragraph::new(text)
                 .style(Style::default().fg(Color::Yellow))
@@ -368,7 +366,11 @@ fn draw_body(frame: &mut Frame, app: &App, area: ratatui::layout::Rect) {
             let error = Paragraph::new(message.as_str())
                 .style(Style::default().fg(Color::Red))
                 .wrap(Wrap { trim: true })
-                .block(Block::default().borders(Borders::ALL).title(" Error "));
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .title(t!("tui.error_title").into_owned()),
+                );
             frame.render_widget(error, area);
         }
 
@@ -402,7 +404,7 @@ fn draw_body(frame: &mut Frame, app: &App, area: ratatui::layout::Rect) {
             let list = List::new(items).block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(" Suggestions "),
+                    .title(t!("tui.suggestions_title").into_owned()),
             );
             frame.render_widget(list, area);
         }
@@ -411,19 +413,16 @@ fn draw_body(frame: &mut Frame, app: &App, area: ratatui::layout::Rect) {
 
 fn draw_hints(frame: &mut Frame, app: &App, area: ratatui::layout::Rect) {
     let text = match &app.screen {
-        Screen::Editing => "Enter send · Esc quit".to_string(),
-        Screen::Waiting { .. } => "Esc cancel".to_string(),
-        Screen::Failed { .. } => "Any key to edit the query · Esc quit".to_string(),
+        Screen::Editing => t!("tui.hints_editing").into_owned(),
+        Screen::Waiting { .. } => t!("tui.hints_waiting").into_owned(),
+        Screen::Failed { .. } => t!("tui.hints_failed").into_owned(),
         Screen::Choosing { .. } => {
             let tab = if app.buffer_supported {
-                "Tab to edit"
+                t!("tui.tab_to_edit")
             } else {
-                "Tab to copy"
+                t!("tui.tab_to_copy")
             };
-            format!(
-                "1-9/↑↓ select · Enter run · {tab} · c copy · \
-                 Ctrl+R retry · Ctrl+N new query · Esc quit"
-            )
+            t!("tui.hints_choosing", tab = tab).into_owned()
         }
     };
 

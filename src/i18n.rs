@@ -188,6 +188,35 @@ mod catalogues {
     }
 
     #[test]
+    fn the_full_screen_hint_bar_stays_close_to_the_english_one() {
+        // Unlike the picker footer, which select.rs truncates itself, this bar
+        // is clipped by the terminal. English already runs to 93 columns, so
+        // the budget is not a round number but the little headroom left over
+        // it: a translation that needs a paragraph has to be shortened.
+        let all = entries();
+        let find = |key: &str| -> BTreeMap<String, String> {
+            all.iter()
+                .find(|(k, _)| k == key)
+                .unwrap_or_else(|| panic!("{key} is missing"))
+                .1
+                .clone()
+        };
+        let bar = find("tui.hints_choosing");
+        for tab_key in ["tui.tab_to_edit", "tui.tab_to_copy"] {
+            let tab = find(tab_key);
+            for lang in Lang::ALL {
+                let code = lang.code();
+                let text = bar[code].replace("%{tab}", &tab[code]);
+                let width = text.chars().count();
+                assert!(
+                    width <= 100,
+                    "{code} with {tab_key}: {width} columns, {text}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn identifiers_are_never_translated() {
         // These are things the user has to type back verbatim; translating one
         // turns a fix-it hint into an instruction that does not work.

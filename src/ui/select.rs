@@ -6,6 +6,7 @@ use std::io::{self, IsTerminal, Write};
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use crossterm::{cursor, style, terminal, QueueableCommand};
+use rust_i18n::t;
 
 use crate::suggestion::Suggestion;
 use crate::ui::Outcome;
@@ -162,11 +163,11 @@ fn draw(
 
 fn hints(buffer_supported: bool) -> String {
     let tab = if buffer_supported {
-        "Tab to edit"
+        t!("tui.tab_to_edit")
     } else {
-        "Tab to copy"
+        t!("tui.tab_to_copy")
     };
-    format!("1-9/↑↓ select · Enter run · {tab} · c copy · Esc cancel")
+    t!("tui.hints_picker", tab = tab).to_string()
 }
 
 /// Erase the UI, leaving the cursor at the start of the line.
@@ -209,6 +210,8 @@ fn truncate(text: &str, max: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::i18n::Lang;
+    use crate::testutil::locale_guard;
 
     #[test]
     fn truncate_keeps_short_text_intact() {
@@ -240,6 +243,22 @@ mod tests {
     fn hints_mention_the_actual_tab_behaviour() {
         assert!(hints(true).contains("Tab to edit"));
         assert!(hints(false).contains("Tab to copy"));
+    }
+
+    #[test]
+    fn the_hints_fit_beside_a_truncated_footer() {
+        // The footer is cut to the terminal width, so a hint that outgrows an
+        // 80-column terminal loses its last keys without saying so. Three
+        // columns go to the indent and the ellipsis.
+        let _guard = locale_guard();
+        for lang in Lang::ALL {
+            rust_i18n::set_locale(lang.code());
+            for buffered in [true, false] {
+                let hint = hints(buffered);
+                let width = hint.chars().count();
+                assert!(width <= 77, "{lang:?} ({buffered}): {width} chars, {hint}");
+            }
+        }
     }
 
     #[test]

@@ -1,0 +1,120 @@
+# The inline picker and the full-screen interactive mode.
+#
+# Two things to watch here. Key names — Enter, Esc, Tab, Ctrl+R — are what is
+# printed on the keyboard and are never translated. And the hint bars are
+# length-critical: the picker truncates its footer to the terminal width, so a
+# hint that outgrows it silently loses its last keys. Tests cap both bars.
+_version = 2
+
+[tui.query_title]
+en = " What do you need to do? "
+ru = " Что нужно сделать? "
+es = " ¿Qué necesita hacer? "
+fr = " Que faut-il faire ? "
+de = " Was ist zu tun? "
+
+[tui.editing_hint]
+en = "Describe your task in plain language and press Enter."
+ru = "Опишите задачу обычными словами и нажмите Enter."
+es = "Describa su tarea en lenguaje corriente y pulse Enter."
+fr = "Décrivez votre tâche en langage courant et appuyez sur Enter."
+de = "Beschreiben Sie Ihre Aufgabe in normaler Sprache und drücken Sie Enter."
+
+[tui.thinking]
+en = "%{spinner} Thinking…"
+ru = "%{spinner} Думаю…"
+es = "%{spinner} Pensando…"
+fr = "%{spinner} Réflexion…"
+de = "%{spinner} Denke nach…"
+
+[tui.thinking_seconds]
+en = "%{spinner} Thinking… (%{seconds}s)"
+ru = "%{spinner} Думаю… (%{seconds} с)"
+es = "%{spinner} Pensando… (%{seconds} s)"
+fr = "%{spinner} Réflexion… (%{seconds} s)"
+de = "%{spinner} Denke nach… (%{seconds} s)"
+
+[tui.error_title]
+en = " Error "
+ru = " Ошибка "
+es = " Error "
+fr = " Erreur "
+de = " Fehler "
+
+[tui.suggestions_title]
+en = " Suggestions "
+ru = " Варианты "
+es = " Sugerencias "
+fr = " Suggestions "
+de = " Vorschläge "
+
+[tui.no_suggestions]
+en = "The model returned no suggestions."
+ru = "Модель не вернула ни одного варианта."
+es = "El modelo no devolvió ninguna sugerencia."
+fr = "Le modèle n'a renvoyé aucune suggestion."
+de = "Das Modell hat keine Vorschläge zurückgegeben."
+
+[tui.request_interrupted]
+en = "the background request was interrupted"
+ru = "фоновый запрос был прерван"
+es = "la solicitud en segundo plano se interrumpió"
+fr = "la requête en arrière-plan a été interrompue"
+de = "die Anfrage im Hintergrund wurde unterbrochen"
+
+[tui.needs_a_terminal]
+en = "interactive mode needs a terminal.\nPass the task as an argument instead: plz \"describe your task\""
+ru = "интерактивному режиму нужен терминал.\nПередайте задачу аргументом: plz \"опишите задачу\""
+es = "el modo interactivo necesita un terminal.\nPase la tarea como argumento: plz \"describa su tarea\""
+fr = "le mode interactif nécessite un terminal.\nPassez la tâche en argument : plz \"décrivez votre tâche\""
+de = "der interaktive Modus benötigt ein Terminal.\nÜbergeben Sie die Aufgabe als Argument: plz \"beschreiben Sie Ihre Aufgabe\""
+
+# What Tab does depends on whether the shell can take a command into its buffer.
+[tui.tab_to_edit]
+en = "Tab to edit"
+ru = "Tab правка"
+es = "Tab editar"
+fr = "Tab éditer"
+de = "Tab ändern"
+
+[tui.tab_to_copy]
+en = "Tab to copy"
+ru = "Tab копия"
+es = "Tab copiar"
+fr = "Tab copier"
+de = "Tab kopieren"
+
+[tui.hints_picker]
+en = "1-9/↑↓ select · Enter run · %{tab} · c copy · Esc cancel"
+ru = "1-9/↑↓ выбор · Enter запуск · %{tab} · c копия · Esc отмена"
+es = "1-9/↑↓ elegir · Enter ejecutar · %{tab} · c copiar · Esc cancelar"
+fr = "1-9/↑↓ choisir · Enter exécuter · %{tab} · c copier · Esc annuler"
+de = "1-9/↑↓ wählen · Enter starten · %{tab} · c kopieren · Esc abbrechen"
+
+[tui.hints_choosing]
+en = "1-9/↑↓ select · Enter run · %{tab} · c copy · Ctrl+R retry · Ctrl+N new query · Esc quit"
+ru = "1-9/↑↓ выбор · Enter запуск · %{tab} · c копия · Ctrl+R повтор · Ctrl+N новый · Esc выход"
+es = "1-9/↑↓ elegir · Enter ejecutar · %{tab} · c copiar · Ctrl+R repetir · Ctrl+N nueva · Esc salir"
+fr = "1-9/↑↓ choix · Enter lancer · %{tab} · c copier · Ctrl+R relance · Ctrl+N nouveau · Esc quitter"
+de = "1-9/↑↓ wählen · Enter starten · %{tab} · c Kopie · Ctrl+R erneut · Ctrl+N neu · Esc beenden"
+
+[tui.hints_editing]
+en = "Enter send · Esc quit"
+ru = "Enter отправить · Esc выход"
+es = "Enter enviar · Esc salir"
+fr = "Enter envoyer · Esc quitter"
+de = "Enter senden · Esc beenden"
+
+[tui.hints_waiting]
+en = "Esc cancel"
+ru = "Esc отмена"
+es = "Esc cancelar"
+fr = "Esc annuler"
+de = "Esc abbrechen"
+
+[tui.hints_failed]
+en = "Any key to edit the query · Esc quit"
+ru = "Любая клавиша — правка запроса · Esc выход"
+es = "Cualquier tecla para editar la consulta · Esc salir"
+fr = "N'importe quelle touche pour modifier la requête · Esc quitter"
+de = "Beliebige Taste zum Bearbeiten der Anfrage · Esc beenden"
