@@ -1,0 +1,176 @@
+# `plz config init` and `plz config show`.
+#
+# The `#` comment lines of `config show` are prose and translated; the values
+# beside them are data and are not. See locales/errors.toml for the shared rules.
+_version = 2
+
+[wizard.choose_a_provider]
+en = "Setting up plz. Choose a provider:"
+ru = "Настройка plz. Выберите провайдера:"
+es = "Configurando plz. Elija un proveedor:"
+fr = "Configuration de plz. Choisissez un fournisseur :"
+de = "plz wird eingerichtet. Wählen Sie einen Anbieter:"
+
+[wizard.number]
+en = "Number"
+ru = "Номер"
+es = "Número"
+fr = "Numéro"
+de = "Nummer"
+
+[wizard.base_url]
+en = "Base URL"
+ru = "Базовый URL"
+es = "URL base"
+fr = "URL de base"
+de = "Basis-URL"
+
+[wizard.model]
+en = "Model"
+ru = "Модель"
+es = "Modelo"
+fr = "Modèle"
+de = "Modell"
+
+[wizard.api_key]
+en = "API key"
+ru = "Ключ API"
+es = "Clave de API"
+fr = "Clé d'API"
+de = "API-Schlüssel"
+
+[wizard.overwrite]
+en = "%{path} already exists. Overwrite?"
+ru = "%{path} уже существует. Перезаписать?"
+es = "%{path} ya existe. ¿Sobrescribir?"
+fr = "%{path} existe déjà. L'écraser ?"
+de = "%{path} existiert bereits. Überschreiben?"
+
+[wizard.get_a_key]
+en = "Get a key here: %{hint}"
+ru = "Получить ключ здесь: %{hint}"
+es = "Obtenga una clave aquí: %{hint}"
+fr = "Obtenez une clé ici : %{hint}"
+de = "Einen Schlüssel erhalten Sie hier: %{hint}"
+
+[wizard.leave_blank]
+en = "Leave this blank if the key is already set in %{var} or PLZ_API_KEY."
+ru = "Оставьте пустым, если ключ уже задан в %{var} или PLZ_API_KEY."
+es = "Déjelo en blanco si la clave ya está definida en %{var} o PLZ_API_KEY."
+fr = "Laissez vide si la clé est déjà définie dans %{var} ou PLZ_API_KEY."
+de = "Lassen Sie das Feld leer, wenn der Schlüssel bereits in %{var} oder PLZ_API_KEY gesetzt ist."
+
+[wizard.saved]
+en = "Configuration saved to %{path}"
+ru = "Конфигурация сохранена в %{path}"
+es = "Configuración guardada en %{path}"
+fr = "Configuration enregistrée dans %{path}"
+de = "Konfiguration in %{path} gespeichert"
+
+[wizard.no_key_set]
+en = "Warning: no key set, neither in the config nor in the environment."
+ru = "Внимание: ключ не задан ни в конфигурации, ни в окружении."
+es = "Advertencia: no hay ninguna clave definida, ni en la configuración ni en el entorno."
+fr = "Attention : aucune clé définie, ni dans la configuration ni dans l'environnement."
+de = "Warnung: kein Schlüssel gesetzt, weder in der Konfiguration noch in der Umgebung."
+
+# Preset entries. Brand names — DeepSeek, OpenAI, OpenRouter — are not here:
+# they are names, not words. These two are prose, and so are their key hints.
+[wizard.preset_ollama]
+en = "Ollama (local)"
+ru = "Ollama (локально)"
+es = "Ollama (local)"
+fr = "Ollama (local)"
+de = "Ollama (lokal)"
+
+[wizard.preset_custom]
+en = "Another OpenAI-compatible endpoint"
+ru = "Другой OpenAI-совместимый эндпоинт"
+es = "Otro endpoint compatible con OpenAI"
+fr = "Un autre point de terminaison compatible OpenAI"
+de = "Ein anderer OpenAI-kompatibler Endpunkt"
+
+[wizard.no_key_required]
+en = "no key required"
+ru = "ключ не требуется"
+es = "no se requiere clave"
+fr = "aucune clé requise"
+de = "kein Schlüssel erforderlich"
+
+[wizard.see_provider_docs]
+en = "see your provider's documentation"
+ru = "смотрите документацию вашего провайдера"
+es = "consulte la documentación de su proveedor"
+fr = "consultez la documentation de votre fournisseur"
+de = "siehe die Dokumentation Ihres Anbieters"
+
+[wizard.address_entered_manually]
+en = "address entered manually"
+ru = "адрес вводится вручную"
+es = "dirección introducida manualmente"
+fr = "adresse saisie manuellement"
+de = "Adresse manuell eingegeben"
+
+# `plz config show`
+[wizard.detected_environment]
+en = "Detected environment (sent to the model)"
+ru = "Обнаруженное окружение (отправляется модели)"
+es = "Entorno detectado (se envía al modelo)"
+fr = "Environnement détecté (envoyé au modèle)"
+de = "Erkannte Umgebung (wird an das Modell gesendet)"
+
+[wizard.field_os]
+en = "OS:"
+ru = "ОС:"
+es = "SO:"
+fr = "SE :"
+de = "BS:"
+
+[wizard.field_architecture]
+en = "Architecture:"
+ru = "Архитектура:"
+es = "Arquitectura:"
+fr = "Architecture :"
+de = "Architektur:"
+
+[wizard.field_shell]
+en = "Shell:"
+ru = "Шелл:"
+es = "Shell:"
+fr = "Shell :"
+de = "Shell:"
+
+[wizard.field_directory]
+en = "Directory:"
+ru = "Каталог:"
+es = "Directorio:"
+fr = "Répertoire :"
+de = "Verzeichnis:"
+
+[wizard.directory_not_sent]
+en = "not sent (send_cwd = false)"
+ru = "не отправляется (send_cwd = false)"
+es = "no se envía (send_cwd = false)"
+fr = "non envoyé (send_cwd = false)"
+de = "wird nicht gesendet (send_cwd = false)"
+
+[wizard.field_wrapper]
+en = "Shell wrapper:"
+ru = "Обёртка для шелла:"
+es = "Envoltorio del shell:"
+fr = "Enveloppe du shell :"
+de = "Shell-Wrapper:"
+
+[wizard.wrapper_active]
+en = "active"
+ru = "активна"
+es = "activo"
+fr = "active"
+de = "aktiv"
+
+[wizard.wrapper_not_installed]
+en = "not installed (run `plz hook <shell> --install`)"
+ru = "не установлена (выполните `plz hook <shell> --install`)"
+es = "no instalado (ejecute `plz hook <shell> --install`)"
+fr = "non installée (exécutez `plz hook <shell> --install`)"
+de = "nicht installiert (führen Sie `plz hook <shell> --install` aus)"

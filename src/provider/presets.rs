@@ -1,3 +1,5 @@
+use rust_i18n::t;
+
 /// A ready-made setup for one OpenAI-compatible endpoint.
 ///
 /// Everything here is only a default for the config. Users can override any of
@@ -97,11 +99,32 @@ impl Preset {
     ///
     /// `custom` has none — the user types the address themselves, and empty
     /// parentheses in the list would look like a bug.
-    pub fn base_url_display(&self) -> &str {
+    pub fn base_url_display(&self) -> String {
         if self.base_url.is_empty() {
-            "address entered manually"
+            t!("wizard.address_entered_manually").to_string()
         } else {
-            self.base_url
+            self.base_url.to_string()
+        }
+    }
+
+    /// The title as shown in the setup list.
+    ///
+    /// The struct keeps the English text as the preset's identity; only the two
+    /// entries that are prose rather than a brand name have a translation.
+    pub fn title_display(&self) -> String {
+        match self.name {
+            n if n == OLLAMA.name => t!("wizard.preset_ollama").to_string(),
+            n if n == CUSTOM.name => t!("wizard.preset_custom").to_string(),
+            _ => self.title.to_string(),
+        }
+    }
+
+    /// Where to get a key. For most presets this is a URL, which stays as it is.
+    pub fn key_hint_display(&self) -> String {
+        match self.name {
+            n if n == OLLAMA.name => t!("wizard.no_key_required").to_string(),
+            n if n == CUSTOM.name => t!("wizard.see_provider_docs").to_string(),
+            _ => self.key_hint.to_string(),
         }
     }
 }

@@ -299,32 +299,33 @@ fn run_config(action: &ConfigAction) -> Result<()> {
 /// shell, and the first thing to attach to a bug report.
 fn print_environment(config: &Config) {
     let ctx = Context::detect(config.behavior.send_cwd);
-    println!("\n# Detected environment (sent to the model)");
-    print!("# OS: {}", ctx.os);
+    // The labels are prose and translated; the values beside them are what
+    // goes to the model, and stay exactly as they are sent.
+    println!("\n# {}", t!("wizard.detected_environment"));
+    print!("# {} {}", t!("wizard.field_os"), ctx.os);
     match &ctx.os_version {
         Some(version) => println!(" {version}"),
         None => println!(),
     }
-    println!("# Architecture: {}", ctx.arch);
-    println!("# Shell: {}", ctx.shell);
-    match &ctx.cwd {
-        Some(cwd) => println!("# Directory: {cwd}"),
-        None => println!("# Directory: not sent (send_cwd = false)"),
-    }
-    if std::env::var_os("PLZ_OUTPUT_FILE").is_some() {
-        println!("# Shell wrapper: active");
+    println!("# {} {}", t!("wizard.field_architecture"), ctx.arch);
+    println!("# {} {}", t!("wizard.field_shell"), ctx.shell);
+    let directory = match &ctx.cwd {
+        Some(cwd) => cwd.clone(),
+        None => t!("wizard.directory_not_sent").to_string(),
+    };
+    println!("# {} {directory}", t!("wizard.field_directory"));
+    let wrapper = if std::env::var_os("PLZ_OUTPUT_FILE").is_some() {
+        t!("wizard.wrapper_active")
     } else {
-        println!("# Shell wrapper: not installed (run `plz hook <shell> --install`)");
-    }
+        t!("wizard.wrapper_not_installed")
+    };
+    println!("# {} {wrapper}", t!("wizard.field_wrapper"));
 }
 
 fn edit_config() -> Result<()> {
     let path = Config::path()?;
     if !path.exists() {
-        anyhow::bail!(
-            "no configuration found at {}.\nRun `plz config init`.",
-            path.display()
-        );
+        anyhow::bail!("{}", t!("errors.no_config_to_edit", path = path.display()));
     }
     let editor = std::env::var("VISUAL")
         .or_else(|_| std::env::var("EDITOR"))
@@ -333,9 +334,13 @@ fn edit_config() -> Result<()> {
     let status = std::process::Command::new(&editor).arg(&path).status();
     match status {
         Ok(status) if status.success() => Ok(()),
-        Ok(status) => anyhow::bail!("{editor} exited with status {status}"),
+        Ok(status) => anyhow::bail!(
+            "{}",
+            t!("errors.editor_failed", editor = editor, status = status)
+        ),
         Err(err) => anyhow::bail!(
-            "could not launch the editor `{editor}`: {err}\nSet a different one via $EDITOR."
+            "{}",
+            t!("errors.editor_not_launched", editor = editor, err = err)
         ),
     }
 }
@@ -352,27 +357,26 @@ fn init_config() -> Result<()> {
     use provider::presets;
 
     let path = Config::path()?;
-    if path.exists() && !input::confirm(&format!("{} already exists. Overwrite?", path.display()))?
-    {
-        println!("Cancelled.");
+    if path.exists() && !input::confirm(&t!("wizard.overwrite", path = path.display()))? {
+        println!("{}", t!("ui.cancelled"));
         return Ok(());
     }
 
-    println!("Setting up plz. Choose a provider:");
+    println!("{}", t!("wizard.choose_a_provider"));
     let titles: Vec<String> = presets::ALL
         .iter()
-        .map(|p| format!("{} ({})", p.title, p.base_url_display()))
+        .map(|p| format!("{} ({})", p.title_display(), p.base_url_display()))
         .collect();
-    let choice = input::choose("Number", &titles, 0)?;
+    let choice = input::choose(&t!("wizard.number"), &titles, 0)?;
     let preset = presets::ALL[choice];
 
-    let base_url = input::read_line("Base URL", Some(preset.base_url))?;
+    let base_url = input::read_line(&t!("wizard.base_url"), Some(preset.base_url))?;
     if base_url.is_empty() {
-        anyhow::bail!("a base URL is required");
+        anyhow::bail!("{}", t!("errors.base_url_required"));
     }
-    let model = input::read_line("Model", Some(preset.model))?;
+    let model = input::read_line(&t!("wizard.model"), Some(preset.model))?;
     if model.is_empty() {
-        anyhow::bail!("a model name is required");
+        anyhow::bail!("{}", t!("errors.model_required"));
     }
 
     let mut config = Config::default();
@@ -383,21 +387,24 @@ fn init_config() -> Result<()> {
     config.behavior.disable_thinking = preset.disable_thinking;
 
     if preset.key_env.is_some() {
-        println!("Get a key here: {}", preset.key_hint);
+        println!(
+            "{}",
+            t!("wizard.get_a_key", hint = preset.key_hint_display())
+        );
         if let Some(var) = preset.key_env {
-            println!("Leave this blank if the key is already set in {var} or PLZ_API_KEY.");
+            println!("{}", t!("wizard.leave_blank", var = var));
         }
-        let key = input::read_secret("API key")?;
+        let key = input::read_secret(&t!("wizard.api_key"))?;
         if !key.is_empty() {
             config.provider.api_key = Some(key);
         }
     }
 
     let saved = config.save()?;
-    println!("Configuration saved to {}", saved.display());
+    println!("{}", t!("wizard.saved", path = saved.display()));
 
     if config.key_required() && config.api_key().is_none() {
-        println!("Warning: no key set, neither in the config nor in the environment.");
+        println!("{}", t!("wizard.no_key_set"));
     }
     Ok(())
 }

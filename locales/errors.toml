@@ -47,3 +47,87 @@ ru = "stderr не является терминалом"
 es = "stderr no es un terminal"
 fr = "stderr n'est pas un terminal"
 de = "stderr ist kein Terminal"
+
+[errors.no_config_dir]
+en = "could not determine a config directory for this system"
+ru = "не удалось определить каталог конфигурации для этой системы"
+es = "no se pudo determinar un directorio de configuración para este sistema"
+fr = "impossible de déterminer un répertoire de configuration pour ce système"
+de = "es konnte kein Konfigurationsverzeichnis für dieses System ermittelt werden"
+
+[errors.no_config]
+en = "no configuration found at %{path}.\nRun `plz config init` to set one up."
+ru = "конфигурация не найдена: %{path}.\nВыполните `plz config init`, чтобы её создать."
+es = "no se encontró configuración en %{path}.\nEjecute `plz config init` para crearla."
+fr = "aucune configuration trouvée dans %{path}.\nExécutez `plz config init` pour la créer."
+de = "keine Konfiguration unter %{path} gefunden.\nFühren Sie `plz config init` aus, um eine anzulegen."
+
+[errors.no_config_to_edit]
+en = "no configuration found at %{path}.\nRun `plz config init`."
+ru = "конфигурация не найдена: %{path}.\nВыполните `plz config init`."
+es = "no se encontró configuración en %{path}.\nEjecute `plz config init`."
+fr = "aucune configuration trouvée dans %{path}.\nExécutez `plz config init`."
+de = "keine Konfiguration unter %{path} gefunden.\nFühren Sie `plz config init` aus."
+
+[errors.could_not_read]
+en = "could not read %{path}"
+ru = "не удалось прочитать %{path}"
+es = "no se pudo leer %{path}"
+fr = "impossible de lire %{path}"
+de = "%{path} konnte nicht gelesen werden"
+
+[errors.could_not_parse]
+en = "could not parse %{path}"
+ru = "не удалось разобрать %{path}"
+es = "no se pudo analizar %{path}"
+fr = "impossible d'analyser %{path}"
+de = "%{path} konnte nicht ausgewertet werden"
+
+[errors.could_not_serialize]
+en = "could not serialize the configuration"
+ru = "не удалось сериализовать конфигурацию"
+es = "no se pudo serializar la configuración"
+fr = "impossible de sérialiser la configuration"
+de = "die Konfiguration konnte nicht serialisiert werden"
+
+[errors.could_not_set_mode]
+en = "could not set mode 0600 on %{path}"
+ru = "не удалось установить права 0600 на %{path}"
+es = "no se pudieron establecer los permisos 0600 en %{path}"
+fr = "impossible d'appliquer le mode 0600 à %{path}"
+de = "der Modus 0600 konnte für %{path} nicht gesetzt werden"
+
+[errors.could_not_create_dir]
+en = "could not create directory %{path}"
+ru = "не удалось создать каталог %{path}"
+es = "no se pudo crear el directorio %{path}"
+fr = "impossible de créer le répertoire %{path}"
+de = "das Verzeichnis %{path} konnte nicht erstellt werden"
+
+[errors.base_url_required]
+en = "a base URL is required"
+ru = "базовый URL обязателен"
+es = "se requiere una URL base"
+fr = "une URL de base est requise"
+de = "eine Basis-URL ist erforderlich"
+
+[errors.model_required]
+en = "a model name is required"
+ru = "имя модели обязательно"
+es = "se requiere un nombre de modelo"
+fr = "un nom de modèle est requis"
+de = "ein Modellname ist erforderlich"
+
+[errors.editor_failed]
+en = "%{editor} exited with status %{status}"
+ru = "%{editor} завершился со статусом %{status}"
+es = "%{editor} terminó con el estado %{status}"
+fr = "%{editor} s'est terminé avec le statut %{status}"
+de = "%{editor} wurde mit dem Status %{status} beendet"
+
+[errors.editor_not_launched]
+en = "could not launch the editor `%{editor}`: %{err}\nSet a different one via $EDITOR."
+ru = "не удалось запустить редактор `%{editor}`: %{err}\nЗадайте другой через $EDITOR."
+es = "no se pudo iniciar el editor `%{editor}`: %{err}\nEstablezca otro mediante $EDITOR."
+fr = "impossible de lancer l'éditeur `%{editor}` : %{err}\nDéfinissez-en un autre via $EDITOR."
+de = "der Editor `%{editor}` konnte nicht gestartet werden: %{err}\nLegen Sie über $EDITOR einen anderen fest."

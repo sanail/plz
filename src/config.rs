@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context, Result};
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 
 use crate::provider::presets;
@@ -117,7 +118,7 @@ impl Config {
             return Ok(PathBuf::from(custom));
         }
         let dirs = directories::ProjectDirs::from("", "", "plz")
-            .ok_or_else(|| anyhow!("could not determine a config directory for this system"))?;
+            .ok_or_else(|| anyhow!("{}", t!("errors.no_config_dir")))?;
         Ok(dirs.config_dir().join("config.toml"))
     }
 
@@ -126,15 +127,12 @@ impl Config {
     pub fn load() -> Result<Self> {
         let path = Self::path()?;
         if !path.exists() {
-            return Err(anyhow!(
-                "no configuration found at {}.\nRun `plz config init` to set one up.",
-                path.display()
-            ));
+            return Err(anyhow!("{}", t!("errors.no_config", path = path.display())));
         }
         let raw = fs::read_to_string(&path)
-            .with_context(|| format!("could not read {}", path.display()))?;
-        let config: Config =
-            toml::from_str(&raw).with_context(|| format!("could not parse {}", path.display()))?;
+            .with_context(|| t!("errors.could_not_read", path = path.display()).to_string())?;
+        let config: Config = toml::from_str(&raw)
+            .with_context(|| t!("errors.could_not_parse", path = path.display()).to_string())?;
         Ok(config)
     }
 
@@ -143,7 +141,8 @@ impl Config {
         if let Some(parent) = path.parent() {
             create_private_dir(parent)?;
         }
-        let raw = toml::to_string_pretty(self).context("could not serialize the configuration")?;
+        let raw = toml::to_string_pretty(self)
+            .with_context(|| t!("errors.could_not_serialize").to_string())?;
         write_private(&path, &raw)?;
         Ok(path)
     }
@@ -222,22 +221,23 @@ fn write_private(path: &Path, contents: &str) -> Result<()> {
         .truncate(true)
         .mode(0o600)
         .open(path)
-        .with_context(|| format!("could not write {}", path.display()))?;
+        .with_context(|| t!("errors.could_not_write", path = path.display()).to_string())?;
 
     // `mode` applies only to a file this call creates, so a config left behind
     // by an older version keeps its old permissions — tighten those too, while
     // the file is still empty.
     file.set_permissions(fs::Permissions::from_mode(0o600))
-        .with_context(|| format!("could not set mode 0600 on {}", path.display()))?;
+        .with_context(|| t!("errors.could_not_set_mode", path = path.display()).to_string())?;
 
     file.write_all(contents.as_bytes())
-        .with_context(|| format!("could not write {}", path.display()))?;
+        .with_context(|| t!("errors.could_not_write", path = path.display()).to_string())?;
     Ok(())
 }
 
 #[cfg(not(unix))]
 fn write_private(path: &Path, contents: &str) -> Result<()> {
-    fs::write(path, contents).with_context(|| format!("could not write {}", path.display()))
+    fs::write(path, contents)
+        .with_context(|| t!("errors.could_not_write", path = path.display()).to_string())
 }
 
 /// Create the config directory, on Unix reachable only by its owner (0700).
@@ -252,13 +252,13 @@ fn create_private_dir(path: &Path) -> Result<()> {
         .recursive(true)
         .mode(0o700)
         .create(path)
-        .with_context(|| format!("could not create directory {}", path.display()))
+        .with_context(|| t!("errors.could_not_create_dir", path = path.display()).to_string())
 }
 
 #[cfg(not(unix))]
 fn create_private_dir(path: &Path) -> Result<()> {
     fs::create_dir_all(path)
-        .with_context(|| format!("could not create directory {}", path.display()))
+        .with_context(|| t!("errors.could_not_create_dir", path = path.display()).to_string())
 }
 
 #[cfg(test)]
