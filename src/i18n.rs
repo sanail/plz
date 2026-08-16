@@ -29,6 +29,20 @@ impl Lang {
         }
     }
 
+    /// The English name of the language, for the system prompt.
+    ///
+    /// An English name inside an English prompt is what models follow most
+    /// reliably — more so than a locale code or the endonym.
+    pub fn english_name(self) -> &'static str {
+        match self {
+            Lang::En => "English",
+            Lang::Ru => "Russian",
+            Lang::Es => "Spanish",
+            Lang::Fr => "French",
+            Lang::De => "German",
+        }
+    }
+
     /// Match a locale tag against the supported languages.
     ///
     /// Accepts what the platforms actually hand out: `ru_RU.UTF-8`, `fr-CA`,

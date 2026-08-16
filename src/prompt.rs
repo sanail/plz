@@ -4,6 +4,7 @@ use anyhow::{anyhow, Result};
 use serde::Deserialize;
 
 use crate::context::{Context, ShellKind};
+use crate::i18n;
 use crate::suggestion::Suggestion;
 
 /// System prompt: the role, the environment and the required reply format.
@@ -39,14 +40,13 @@ pub fn system_prompt(ctx: &Context, count: usize) -> String {
          3. Do not invent flags or utilities. If a command needs a tool that may not \
             be installed, say so in the explanation.\n\
          4. Do not wrap commands in markdown and do not prefix them with `$`.\n\
-         5. Keep each explanation to one short phrase, and write it in the same \
-            language the task was written in. If that language is not obvious — \
-            a short task, bare command names, or mixed languages — write the \
-            explanation in English.\n\
+         5. Keep each explanation to one short phrase, and write it in {language}, \
+            whatever language the task itself is written in.\n\
          6. Reply with a JSON object ONLY, with no prose around it.\n\n",
         count = count,
         shell = ctx.shell.kind.label(),
         os = ctx.os,
+        language = i18n::current().english_name(),
     ));
 
     prompt.push_str(
@@ -235,14 +235,16 @@ mod tests {
     }
 
     #[test]
-    fn system_prompt_asks_for_the_task_language() {
-        // Non-English users should get explanations they can actually read,
-        // and the model handles that without any i18n machinery on our side.
-        // Short English tasks read as language-neutral, though, so the prompt
-        // names English explicitly instead of letting the model pick at random.
-        let prompt = system_prompt(&ctx(ShellKind::Zsh), 3);
-        assert!(prompt.contains("same language the task was written in"));
-        assert!(prompt.contains("explanation in English"));
+    fn system_prompt_pins_explanations_to_the_interface_language() {
+        // Guessing from the task used to leave a Russian user reading an
+        // English explanation next to a Russian interface whenever they typed
+        // the task in English. The interface language is the settled answer.
+        let _guard = crate::testutil::locale_guard();
+        for lang in crate::i18n::Lang::ALL {
+            rust_i18n::set_locale(lang.code());
+            let prompt = system_prompt(&ctx(ShellKind::Zsh), 3);
+            assert!(prompt.contains(lang.english_name()), "{lang:?}: {prompt}");
+        }
     }
 
     #[test]

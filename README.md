@@ -16,9 +16,8 @@ The same task is solved differently under zsh on macOS, PowerShell, and cmd on
 Windows. So `plz` tells the model which OS, OS version, architecture and shell
 it was launched from, and gets back a command that runs unedited.
 
-Ask in any language you like: `plz` writes each explanation in the language of
-your request, and falls back to English when the request is too short or too
-neutral to tell.
+Ask in any language you like: `plz` follows your system language, and writes
+each explanation in it whatever language the request itself was in.
 
 ## Installation
 
