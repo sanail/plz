@@ -76,6 +76,14 @@ pub fn run(
     let mut stderr = io::stderr();
     terminal::enable_raw_mode()?;
     execute!(stderr, terminal::EnterAlternateScreen)?;
+    // Bracketed paste turns a paste into one event instead of a stream of
+    // keystrokes, so a newline inside it stops sending the query half-typed.
+    // Not on Windows: there crossterm reads console records and never reports
+    // a paste, while the terminal that took the request could still wrap the
+    // text in `ESC[200~` — which would land in the query as plain characters.
+    // A terminal that ignores the request leaves paste as it is today.
+    #[cfg(not(windows))]
+    let _ = execute!(stderr, event::EnableBracketedPaste);
 
     let backend = CrosstermBackend::new(stderr);
     let mut terminal = Terminal::new(backend)?;
@@ -94,6 +102,8 @@ pub fn run(
     // Restore the terminal whatever happens, including a panic while drawing:
     // otherwise the user is stranded in the alternate screen with no echo.
     let _ = terminal::disable_raw_mode();
+    #[cfg(not(windows))]
+    let _ = execute!(terminal.backend_mut(), event::DisableBracketedPaste);
     let _ = execute!(terminal.backend_mut(), terminal::LeaveAlternateScreen);
     let _ = terminal.show_cursor();
 
@@ -143,8 +153,17 @@ fn event_loop(
             continue;
         }
 
-        let Event::Key(key) = event::read()? else {
-            continue;
+        let key = match event::read()? {
+            Event::Key(key) => key,
+            // Pasted text is only text while the query is being typed; on the
+            // other screens every key is a command.
+            Event::Paste(text) => {
+                if matches!(app.screen, Screen::Editing) {
+                    app.query.insert_str(&text);
+                }
+                continue;
+            }
+            _ => continue,
         };
         if key.kind != KeyEventKind::Press {
             continue;

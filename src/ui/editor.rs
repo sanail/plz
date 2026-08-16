@@ -40,6 +40,28 @@ impl LineEditor {
         self.cursor += 1;
     }
 
+    /// Insert pasted text at the cursor.
+    ///
+    /// The field holds a single line, so newlines and tabs become spaces
+    /// instead of drawing as stray glyphs, and the remaining control
+    /// characters are dropped.
+    pub fn insert_str(&mut self, text: &str) {
+        let clean: String = text
+            .chars()
+            .filter_map(|c| match c {
+                '\n' | '\r' | '\t' => Some(' '),
+                c if c.is_control() => None,
+                c => Some(c),
+            })
+            .collect();
+        if clean.is_empty() {
+            return;
+        }
+        let at = self.byte_index(self.cursor);
+        self.text.insert_str(at, &clean);
+        self.cursor += clean.chars().count();
+    }
+
     pub fn backspace(&mut self) {
         if self.cursor == 0 {
             return;
@@ -252,6 +274,14 @@ mod tests {
         line.word_left();
         line.kill_to_end();
         assert_eq!(line.text(), "занятое ");
+    }
+
+    #[test]
+    fn a_pasted_line_break_becomes_a_space() {
+        let mut line = editor("find ");
+        line.insert_str("large\nfiles\u{7}\t");
+        assert_eq!(line.text(), "find large files ");
+        assert_eq!(line.cursor, 17);
     }
 
     #[test]
