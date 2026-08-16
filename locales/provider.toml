@@ -1,0 +1,118 @@
+# Talking to the model endpoint: setup problems, transport failures, HTTP errors.
+#
+# `base_url`, `json_mode`, `timeout_secs`, `PLZ_API_KEY` and `plz config init`
+# are code and stay verbatim. See locales/errors.toml for the shared rules.
+_version = 2
+
+[provider.no_base_url]
+en = "the configuration has no base_url — run `plz config init`"
+ru = "в конфигурации нет base_url — выполните `plz config init`"
+es = "la configuración no tiene base_url — ejecute `plz config init`"
+fr = "la configuration n'a pas de base_url — exécutez `plz config init`"
+de = "die Konfiguration enthält kein base_url — führen Sie `plz config init` aus"
+
+[provider.no_model]
+en = "the configuration has no model — run `plz config init`"
+ru = "в конфигурации нет модели — выполните `plz config init`"
+es = "la configuración no tiene modelo — ejecute `plz config init`"
+fr = "la configuration n'a pas de modèle — exécutez `plz config init`"
+de = "die Konfiguration enthält kein Modell — führen Sie `plz config init` aus"
+
+[provider.no_api_key]
+en = "no API key found.\nSet PLZ_API_KEY or run `plz config init`."
+ru = "ключ API не найден.\nЗадайте PLZ_API_KEY или выполните `plz config init`."
+es = "no se encontró ninguna clave de API.\nDefina PLZ_API_KEY o ejecute `plz config init`."
+fr = "aucune clé d'API trouvée.\nDéfinissez PLZ_API_KEY ou exécutez `plz config init`."
+de = "kein API-Schlüssel gefunden.\nSetzen Sie PLZ_API_KEY oder führen Sie `plz config init` aus."
+
+[provider.no_http_client]
+en = "could not build the HTTP client"
+ru = "не удалось создать HTTP-клиент"
+es = "no se pudo construir el cliente HTTP"
+fr = "impossible de construire le client HTTP"
+de = "der HTTP-Client konnte nicht erstellt werden"
+
+[provider.unreadable_response]
+en = "could not read the server's response"
+ru = "не удалось прочитать ответ сервера"
+es = "no se pudo leer la respuesta del servidor"
+fr = "impossible de lire la réponse du serveur"
+de = "die Antwort des Servers konnte nicht gelesen werden"
+
+[provider.unexpected_format]
+en = "unexpected response format from %{endpoint}"
+ru = "неожиданный формат ответа от %{endpoint}"
+es = "formato de respuesta inesperado de %{endpoint}"
+fr = "format de réponse inattendu de %{endpoint}"
+de = "unerwartetes Antwortformat von %{endpoint}"
+
+[provider.empty_response]
+en = "the model returned an empty response"
+ru = "модель вернула пустой ответ"
+es = "el modelo devolvió una respuesta vacía"
+fr = "le modèle a renvoyé une réponse vide"
+de = "das Modell hat eine leere Antwort zurückgegeben"
+
+[provider.timed_out]
+en = "the request to %{endpoint} timed out.\nRaise `timeout_secs` in the configuration or check your connection."
+ru = "истекло время ожидания запроса к %{endpoint}.\nУвеличьте `timeout_secs` в конфигурации или проверьте соединение."
+es = "se agotó el tiempo de espera de la solicitud a %{endpoint}.\nAumente `timeout_secs` en la configuración o compruebe su conexión."
+fr = "la requête vers %{endpoint} a expiré.\nAugmentez `timeout_secs` dans la configuration ou vérifiez votre connexion."
+de = "die Anfrage an %{endpoint} hat das Zeitlimit überschritten.\nErhöhen Sie `timeout_secs` in der Konfiguration oder prüfen Sie Ihre Verbindung."
+
+[provider.no_connection]
+en = "could not connect to %{endpoint}: %{err}.\nCheck base_url and your network (for Ollama, whether the server is running)."
+ru = "не удалось подключиться к %{endpoint}: %{err}.\nПроверьте base_url и сеть (для Ollama — запущен ли сервер)."
+es = "no se pudo conectar con %{endpoint}: %{err}.\nCompruebe base_url y su red (para Ollama, si el servidor está en marcha)."
+fr = "impossible de se connecter à %{endpoint} : %{err}.\nVérifiez base_url et votre réseau (pour Ollama, si le serveur tourne)."
+de = "keine Verbindung zu %{endpoint} möglich: %{err}.\nPrüfen Sie base_url und Ihr Netzwerk (bei Ollama, ob der Server läuft)."
+
+[provider.request_failed]
+en = "request to %{endpoint} failed: %{err}"
+ru = "запрос к %{endpoint} не удался: %{err}"
+es = "la solicitud a %{endpoint} falló: %{err}"
+fr = "la requête vers %{endpoint} a échoué : %{err}"
+de = "die Anfrage an %{endpoint} ist fehlgeschlagen: %{err}"
+
+[provider.api_error]
+en = "the API returned %{status}: %{detail}"
+ru = "API вернул %{status}: %{detail}"
+es = "la API devolvió %{status}: %{detail}"
+fr = "l'API a renvoyé %{status} : %{detail}"
+de = "die API hat %{status} zurückgegeben: %{detail}"
+
+# Hints appended to the line above, one per status class.
+[provider.hint_unauthorized]
+en = "The key is invalid or expired. Check PLZ_API_KEY or run `plz config init`."
+ru = "Ключ недействителен или истёк. Проверьте PLZ_API_KEY или выполните `plz config init`."
+es = "La clave no es válida o ha caducado. Compruebe PLZ_API_KEY o ejecute `plz config init`."
+fr = "La clé est invalide ou expirée. Vérifiez PLZ_API_KEY ou exécutez `plz config init`."
+de = "Der Schlüssel ist ungültig oder abgelaufen. Prüfen Sie PLZ_API_KEY oder führen Sie `plz config init` aus."
+
+[provider.hint_not_found]
+en = "Check base_url and the model name — the provider may not have that model."
+ru = "Проверьте base_url и имя модели — возможно, у провайдера такой модели нет."
+es = "Compruebe base_url y el nombre del modelo — puede que el proveedor no tenga ese modelo."
+fr = "Vérifiez base_url et le nom du modèle — le fournisseur n'a peut-être pas ce modèle."
+de = "Prüfen Sie base_url und den Modellnamen — der Anbieter hat dieses Modell möglicherweise nicht."
+
+[provider.hint_rate_limited]
+en = "Rate limit exceeded. Wait, or check your account balance."
+ru = "Превышен лимит запросов. Подождите или проверьте баланс аккаунта."
+es = "Límite de peticiones superado. Espere o compruebe el saldo de su cuenta."
+fr = "Limite de requêtes dépassée. Patientez ou vérifiez le solde de votre compte."
+de = "Anfragelimit überschritten. Warten Sie oder prüfen Sie Ihr Kontoguthaben."
+
+[provider.hint_bad_request]
+en = "Request rejected. If the endpoint does not support json_object, set `json_mode = false` in the configuration."
+ru = "Запрос отклонён. Если эндпоинт не поддерживает json_object, задайте `json_mode = false` в конфигурации."
+es = "Solicitud rechazada. Si el endpoint no admite json_object, establezca `json_mode = false` en la configuración."
+fr = "Requête rejetée. Si le point de terminaison ne prend pas en charge json_object, définissez `json_mode = false` dans la configuration."
+de = "Anfrage abgelehnt. Wenn der Endpunkt json_object nicht unterstützt, setzen Sie `json_mode = false` in der Konfiguration."
+
+[provider.hint_server_error]
+en = "The provider had a server-side error. Try again later."
+ru = "На стороне провайдера произошла ошибка сервера. Попробуйте позже."
+es = "El proveedor tuvo un error del servidor. Inténtelo más tarde."
+fr = "Le fournisseur a rencontré une erreur serveur. Réessayez plus tard."
+de = "Beim Anbieter ist ein Serverfehler aufgetreten. Versuchen Sie es später erneut."

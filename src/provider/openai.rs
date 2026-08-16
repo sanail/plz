@@ -3,6 +3,7 @@
 use std::time::Duration;
 
 use anyhow::{anyhow, Context as _, Result};
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
@@ -23,25 +24,22 @@ pub struct OpenAiProvider {
 impl OpenAiProvider {
     pub fn from_config(config: &Config) -> Result<Self> {
         if config.provider.base_url.trim().is_empty() {
-            anyhow::bail!("the configuration has no base_url — run `plz config init`");
+            anyhow::bail!("{}", t!("provider.no_base_url"));
         }
         if config.provider.model.trim().is_empty() {
-            anyhow::bail!("the configuration has no model — run `plz config init`");
+            anyhow::bail!("{}", t!("provider.no_model"));
         }
 
         let api_key = config.api_key();
         if config.key_required() && api_key.is_none() {
-            anyhow::bail!(
-                "no API key found.\n\
-                 Set PLZ_API_KEY or run `plz config init`."
-            );
+            anyhow::bail!("{}", t!("provider.no_api_key"));
         }
 
         let client = reqwest::blocking::Client::builder()
             .timeout(Duration::from_secs(config.behavior.timeout_secs))
             .user_agent(concat!("plz/", env!("CARGO_PKG_VERSION")))
             .build()
-            .context("could not build the HTTP client")?;
+            .with_context(|| t!("provider.no_http_client").to_string())?;
 
         Ok(Self {
             client,
@@ -77,14 +75,14 @@ impl OpenAiProvider {
         let status = response.status();
         let body = response
             .text()
-            .context("could not read the server's response")?;
+            .with_context(|| t!("provider.unreadable_response").to_string())?;
 
         if !status.is_success() {
             return Err(describe_api_error(status, &body));
         }
 
         serde_json::from_str::<ChatResponse>(&body)
-            .with_context(|| format!("unexpected response format from {}", self.endpoint))
+            .with_context(|| t!("provider.unexpected_format", endpoint = self.endpoint).to_string())
     }
 }
 
@@ -121,7 +119,7 @@ impl Provider for OpenAiProvider {
             .into_iter()
             .next()
             .map(|c| c.message.content)
-            .ok_or_else(|| anyhow!("the model returned an empty response"))?;
+            .ok_or_else(|| anyhow!("{}", t!("provider.empty_response")))?;
 
         let mut suggestions = prompt::parse_suggestions(&content)?;
         suggestions.truncate(count);
@@ -132,18 +130,18 @@ impl Provider for OpenAiProvider {
 /// Turn a transport error into a hint about what to fix.
 fn describe_transport_error(err: reqwest::Error, endpoint: &str) -> anyhow::Error {
     if err.is_timeout() {
-        return anyhow!(
-            "the request to {endpoint} timed out.\n\
-             Raise `timeout_secs` in the configuration or check your connection."
-        );
+        return anyhow!("{}", t!("provider.timed_out", endpoint = endpoint));
     }
     if err.is_connect() {
         return anyhow!(
-            "could not connect to {endpoint}: {err}.\n\
-             Check base_url and your network (for Ollama, whether the server is running)."
+            "{}",
+            t!("provider.no_connection", endpoint = endpoint, err = err)
         );
     }
-    anyhow!("request to {endpoint} failed: {err}")
+    anyhow!(
+        "{}",
+        t!("provider.request_failed", endpoint = endpoint, err = err)
+    )
 }
 
 /// Turn an HTTP error from the API into a human-readable message.
@@ -151,21 +149,19 @@ fn describe_api_error(status: reqwest::StatusCode, body: &str) -> anyhow::Error 
     let detail = extract_api_message(body).unwrap_or_else(|| snippet(body));
 
     let hint = match status.as_u16() {
-        401 | 403 => "The key is invalid or expired. Check PLZ_API_KEY or run `plz config init`.",
-        404 => "Check base_url and the model name — the provider may not have that model.",
-        429 => "Rate limit exceeded. Wait, or check your account balance.",
-        400 => {
-            "Request rejected. If the endpoint does not support json_object, \
-                set `json_mode = false` in the configuration."
-        }
-        500..=599 => "The provider had a server-side error. Try again later.",
-        _ => "",
+        401 | 403 => t!("provider.hint_unauthorized"),
+        404 => t!("provider.hint_not_found"),
+        429 => t!("provider.hint_rate_limited"),
+        400 => t!("provider.hint_bad_request"),
+        500..=599 => t!("provider.hint_server_error"),
+        _ => "".into(),
     };
 
+    let line = t!("provider.api_error", status = status, detail = detail);
     if hint.is_empty() {
-        anyhow!("the API returned {status}: {detail}")
+        anyhow!("{line}")
     } else {
-        anyhow!("the API returned {status}: {detail}\n{hint}")
+        anyhow!("{line}\n{hint}")
     }
 }
 
