@@ -1,0 +1,14 @@
+# Interface messages, one key per message, all languages side by side.
+#
+# Identifiers inside the prose — `base_url`, `json_mode`, `timeout_secs`,
+# `PLZ_API_KEY`, `plz config init`, `cmd.exe`, `RemoteSigned` — are code, not
+# words: they stay verbatim in every language. A test enforces it, along with
+# the `%{...}` placeholders.
+_version = 2
+
+[errors.no_suggestions]
+en = "the model returned no suggestions"
+ru = "модель не вернула ни одного варианта"
+es = "el modelo no devolvió ninguna sugerencia"
+fr = "le modèle n'a renvoyé aucune suggestion"
+de = "das Modell hat keine Vorschläge zurückgegeben"

@@ -30,8 +30,13 @@ reqwest = { version = "0.13", default-features = false, features = [
     "rustls-native-certs",
     "webpki-roots",
 ] }
+# The catalogues are embedded at compile time; the parsers and the file walker
+# that does it sit behind the `codegen` feature and stay out of the binary.
+rust-i18n = "4.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+# The OS language, which is not an environment variable on macOS or Windows.
+sys-locale = "0.3"
 sysinfo = { version = "0.39", default-features = false, features = ["system"] }
 toml = "1.1"
 

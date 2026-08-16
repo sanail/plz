@@ -3,6 +3,7 @@ mod clipboard;
 mod config;
 mod context;
 mod exec;
+mod i18n;
 mod input;
 mod install;
 mod integration;
@@ -18,6 +19,7 @@ use std::io::IsTerminal;
 
 use anyhow::Result;
 use clap::Parser;
+use rust_i18n::t;
 
 use cli::{Cli, Command, ConfigAction};
 use config::Config;
@@ -27,6 +29,10 @@ use provider::Provider;
 use suggestion::Suggestion;
 use ui::Outcome;
 
+// A message missing from a language falls back to English rather than showing
+// its key. `--help` is deliberately not translated and stays with clap.
+rust_i18n::i18n!("locales", fallback = "en");
+
 fn main() {
     if let Err(err) = run() {
         eprintln!("plz: {err:#}");
@@ -35,6 +41,7 @@ fn main() {
 }
 
 fn run() -> Result<()> {
+    i18n::init();
     let cli = Cli::parse();
 
     match &cli.command {
@@ -77,7 +84,7 @@ fn run_task(cli: &Cli, task: &str) -> Result<()> {
     let suggestions = provider.suggest(&ctx, task, count)?;
 
     if suggestions.is_empty() {
-        anyhow::bail!("the model returned no suggestions");
+        anyhow::bail!("{}", t!("errors.no_suggestions"));
     }
 
     // Before the picker: with these flags there is nothing to pick.

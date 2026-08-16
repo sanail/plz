@@ -22,3 +22,20 @@ pub fn env_guard() -> MutexGuard<'static, ()> {
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
+
+/// Holds the environment lock and puts the interface language back on drop.
+///
+/// The locale is process-wide too, so a test that changes it would otherwise
+/// pick the language for whatever runs next. English is the value the rest of
+/// the suite assumes, because nothing but a test ever calls `i18n::init`.
+pub struct LocaleGuard(#[allow(dead_code)] MutexGuard<'static, ()>);
+
+impl Drop for LocaleGuard {
+    fn drop(&mut self) {
+        rust_i18n::set_locale("en");
+    }
+}
+
+pub fn locale_guard() -> LocaleGuard {
+    LocaleGuard(env_guard())
+}
