@@ -74,10 +74,10 @@ pub struct BehaviorConfig {
     pub disable_thinking: bool,
     /// Interface language, or "auto" to follow the OS
     ///
-    /// A free string rather than an enum: an unknown value has to degrade to
-    /// auto-detection, because a config that fails to parse takes plz down with
-    /// it. Left out of files that do not set it, so nothing changes for anyone
-    /// who does not care.
+    /// A free string rather than an enum: an unknown value falls back to
+    /// English, whereas an enum would make the whole config unparseable and
+    /// take plz down with it. Left out of files that do not set it, so nothing
+    /// changes for anyone who does not care.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
 }

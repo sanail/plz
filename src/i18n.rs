@@ -71,15 +71,20 @@ fn first_supported(list: &str) -> Option<Lang> {
 /// Pick the language from the sources, in priority order.
 ///
 /// `forced` comes first so a single run can be overridden without touching
-/// anything on disk, then the config, then what the OS reports. Whatever is
-/// undetectable or unsupported means English — including the default
-/// `language = "auto"`, which is simply not the name of a language.
+/// anything on disk, then the config, then what the OS reports.
+///
+/// An explicit request settles the matter even when plz ships no catalogue for
+/// it: someone who asks for Italian gets English, not whatever language the
+/// machine happens to be set to. Only the ways of asking for nothing — unset,
+/// blank, or the default `auto` — hand the decision down.
 fn resolve(forced: Option<&str>, configured: Option<&str>, detected: Option<&str>) -> Lang {
-    forced
-        .and_then(first_supported)
-        .or_else(|| configured.and_then(first_supported))
-        .or_else(|| detected.and_then(first_supported))
-        .unwrap_or(Lang::En)
+    for request in [forced, configured] {
+        match request.map(str::trim) {
+            None | Some("") | Some("auto") => continue,
+            Some(tag) => return first_supported(tag).unwrap_or(Lang::En),
+        }
+    }
+    detected.and_then(first_supported).unwrap_or(Lang::En)
 }
 
 /// Resolve the interface language and apply it to the whole process.
@@ -325,13 +330,22 @@ mod tests {
     }
 
     #[test]
-    fn an_unusable_source_defers_instead_of_vetoing() {
-        // "auto" is the documented default of the config key, and a misspelled
-        // or unsupported value has to behave the same way: not an answer, so
-        // the next source still gets its turn rather than being shut out.
+    fn asking_for_nothing_hands_the_decision_down() {
+        // "auto" is the documented default of the config key, and an unset or
+        // blank override is no answer either: the next source gets its turn.
         assert_eq!(resolve(None, Some("auto"), Some("ru_RU.UTF-8")), Lang::Ru);
-        assert_eq!(resolve(Some("it"), Some("fr"), None), Lang::Fr);
         assert_eq!(resolve(Some(""), None, Some("de_DE")), Lang::De);
+        assert_eq!(resolve(Some("  "), Some("auto"), Some("fr_FR")), Lang::Fr);
+    }
+
+    #[test]
+    fn asking_for_a_language_plz_lacks_gives_english_not_the_system_one() {
+        // Deferring to the OS here would answer a request for Italian with
+        // whatever the machine is set to, which is neither asked for nor
+        // English. An explicit request is answered, and the answer we have is
+        // English.
+        assert_eq!(resolve(Some("it"), Some("fr"), Some("ru_RU")), Lang::En);
+        assert_eq!(resolve(None, Some("klingon"), Some("ru_RU")), Lang::En);
     }
 
     #[test]
