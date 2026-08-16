@@ -53,23 +53,27 @@ fn first_supported(list: &str) -> Option<Lang> {
 /// Pick the language from the sources, in priority order.
 ///
 /// `forced` comes first so a single run can be overridden without touching
-/// anything on disk. Whatever is undetectable or unsupported means English.
-fn resolve(forced: Option<&str>, detected: Option<&str>) -> Lang {
+/// anything on disk, then the config, then what the OS reports. Whatever is
+/// undetectable or unsupported means English — including the default
+/// `language = "auto"`, which is simply not the name of a language.
+fn resolve(forced: Option<&str>, configured: Option<&str>, detected: Option<&str>) -> Lang {
     forced
         .and_then(first_supported)
+        .or_else(|| configured.and_then(first_supported))
         .or_else(|| detected.and_then(first_supported))
         .unwrap_or(Lang::En)
 }
 
 /// Resolve the interface language and apply it to the whole process.
 ///
-/// `PLZ_LANG` overrides the OS, in the same shape as `PLZ_API_KEY` and
+/// `PLZ_LANG` overrides the config, in the same shape as `PLZ_API_KEY` and
 /// `PLZ_CONFIG`. The OS answer comes from the platform rather than from `LANG`:
 /// macOS reports the region there, and Windows sets it at all only under MSYS2.
-pub fn init() {
+pub fn init(configured: Option<&str>) {
     let forced = std::env::var("PLZ_LANG").ok();
     let detected = sys_locale::get_locale();
-    rust_i18n::set_locale(resolve(forced.as_deref(), detected.as_deref()).code());
+    let lang = resolve(forced.as_deref(), configured, detected.as_deref());
+    rust_i18n::set_locale(lang.code());
 }
 
 #[cfg(test)]
@@ -123,21 +127,33 @@ mod tests {
     }
 
     #[test]
-    fn an_override_wins_over_the_detected_language() {
-        assert_eq!(resolve(Some("es"), Some("ru_RU.UTF-8")), Lang::Es);
-        // An unsupported override is not a veto on the OS: it is simply not an
-        // answer, so detection still gets its turn.
-        assert_eq!(resolve(Some("it"), Some("ru_RU.UTF-8")), Lang::Ru);
+    fn each_source_overrides_the_one_below_it() {
+        assert_eq!(
+            resolve(Some("es"), Some("fr"), Some("ru_RU.UTF-8")),
+            Lang::Es
+        );
+        assert_eq!(resolve(None, Some("fr"), Some("ru_RU.UTF-8")), Lang::Fr);
+        assert_eq!(resolve(None, None, Some("ru_RU.UTF-8")), Lang::Ru);
+    }
+
+    #[test]
+    fn an_unusable_source_defers_instead_of_vetoing() {
+        // "auto" is the documented default of the config key, and a misspelled
+        // or unsupported value has to behave the same way: not an answer, so
+        // the next source still gets its turn rather than being shut out.
+        assert_eq!(resolve(None, Some("auto"), Some("ru_RU.UTF-8")), Lang::Ru);
+        assert_eq!(resolve(Some("it"), Some("fr"), None), Lang::Fr);
+        assert_eq!(resolve(Some(""), None, Some("de_DE")), Lang::De);
     }
 
     #[test]
     fn an_undetectable_or_unsupported_language_falls_back_to_english() {
         // The two halves of the fallback that never reach the catalogue:
         // nothing to detect, and something detected plz has no words for.
-        assert_eq!(resolve(None, None), Lang::En);
-        assert_eq!(resolve(None, Some("C")), Lang::En);
-        assert_eq!(resolve(None, Some("it_IT.UTF-8")), Lang::En);
-        assert_eq!(resolve(Some(""), Some("fi_FI")), Lang::En);
+        assert_eq!(resolve(None, None, None), Lang::En);
+        assert_eq!(resolve(None, None, Some("C")), Lang::En);
+        assert_eq!(resolve(None, None, Some("it_IT.UTF-8")), Lang::En);
+        assert_eq!(resolve(None, Some("auto"), Some("fi_FI")), Lang::En);
     }
 
     #[test]
@@ -168,7 +184,7 @@ mod tests {
         // the variable and handing the code to the translation layer.
         let _guard = locale_guard();
         std::env::set_var("PLZ_LANG", "es");
-        init();
+        init(Some("fr"));
         std::env::remove_var("PLZ_LANG");
         assert_eq!(active(), Some(Lang::Es));
     }

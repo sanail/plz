@@ -71,6 +71,14 @@ pub struct BehaviorConfig {
     /// and an endpoint that does not know it answers 400.
     #[serde(default)]
     pub disable_thinking: bool,
+    /// Interface language, or "auto" to follow the OS
+    ///
+    /// A free string rather than an enum: an unknown value has to degrade to
+    /// auto-detection, because a config that fails to parse takes plz down with
+    /// it. Left out of files that do not set it, so nothing changes for anyone
+    /// who does not care.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
 }
 
 fn default_suggestions() -> usize {
@@ -93,6 +101,7 @@ impl Default for BehaviorConfig {
             json_mode: default_true(),
             // Follows the default provider above, which is DeepSeek.
             disable_thinking: presets::DEEPSEEK.disable_thinking,
+            language: None,
         }
     }
 }
@@ -275,6 +284,20 @@ mod tests {
         assert_eq!(parsed.provider.base_url, config.provider.base_url);
         assert_eq!(parsed.behavior.suggestions, config.behavior.suggestions);
         assert!(parsed.behavior.confirm_dangerous);
+    }
+
+    #[test]
+    fn an_unset_language_stays_out_of_the_written_file() {
+        // The key is opt-in: writing `language = ""` back into everyone's
+        // config would be a visible change for people who never asked for one.
+        let config = Config::default();
+        assert!(config.behavior.language.is_none());
+        assert!(!toml::to_string_pretty(&config)
+            .unwrap()
+            .contains("language"));
+
+        let parsed: Config = toml::from_str("[behavior]\nlanguage = \"fr\"\n").unwrap();
+        assert_eq!(parsed.behavior.language.as_deref(), Some("fr"));
     }
 
     #[test]

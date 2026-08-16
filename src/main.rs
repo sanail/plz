@@ -41,7 +41,15 @@ fn main() {
 }
 
 fn run() -> Result<()> {
-    i18n::init();
+    // Before anything can be printed, including the complaint about a missing
+    // config — hence the best-effort read: a broken or absent config must not
+    // stop the language from being settled.
+    i18n::init(
+        Config::load()
+            .ok()
+            .and_then(|config| config.behavior.language)
+            .as_deref(),
+    );
     let cli = Cli::parse();
 
     match &cli.command {
