@@ -1,0 +1,258 @@
+# `plz hook <shell> --install`.
+#
+# The commands quoted in these messages are typed back verbatim, so
+# `Set-ExecutionPolicy`, `RemoteSigned`, `Get-ExecutionPolicy -List`,
+# `$PROFILE` and `plz hook` stay as they are in every language. See
+# locales/errors.toml for the shared rules.
+_version = 2
+
+[install.to_install]
+en = "To install: %{hint}"
+ru = "Чтобы установить: %{hint}"
+es = "Para instalar: %{hint}"
+fr = "Pour installer : %{hint}"
+de = "Zum Installieren: %{hint}"
+
+[install.or_let_plz_do_it]
+en = "Or let plz do it: plz hook %{shell} --install"
+ru = "Или пусть plz сделает это: plz hook %{shell} --install"
+es = "O deje que plz lo haga: plz hook %{shell} --install"
+fr = "Ou laissez plz le faire : plz hook %{shell} --install"
+de = "Oder plz erledigt es: plz hook %{shell} --install"
+
+[install.already_installed]
+en = "Already installed in %{path}."
+ru = "Уже установлено в %{path}."
+es = "Ya está instalado en %{path}."
+fr = "Déjà installé dans %{path}."
+de = "Bereits in %{path} installiert."
+
+[install.file]
+en = "File: %{path}"
+ru = "Файл: %{path}"
+es = "Archivo: %{path}"
+fr = "Fichier : %{path}"
+de = "Datei: %{path}"
+
+[install.line]
+en = "Line: %{line}"
+ru = "Строка: %{line}"
+es = "Línea: %{line}"
+fr = "Ligne : %{line}"
+de = "Zeile: %{line}"
+
+[install.add_it]
+en = "Add it?"
+ru = "Добавить?"
+es = "¿Añadirla?"
+fr = "L'ajouter ?"
+de = "Hinzufügen?"
+
+[install.nothing_written]
+en = "Nothing was written."
+ru = "Ничего не записано."
+es = "No se escribió nada."
+fr = "Rien n'a été écrit."
+de = "Es wurde nichts geschrieben."
+
+[install.added]
+en = "Added to %{path}."
+ru = "Добавлено в %{path}."
+es = "Añadido a %{path}."
+fr = "Ajouté à %{path}."
+de = "Zu %{path} hinzugefügt."
+
+[install.open_a_new_shell]
+en = "Open a new shell to pick it up."
+ru = "Откройте новый шелл, чтобы изменения вступили в силу."
+es = "Abra un nuevo shell para que surta efecto."
+fr = "Ouvrez un nouveau shell pour que cela prenne effet."
+de = "Öffnen Sie eine neue Shell, damit es wirksam wird."
+
+[install.could_not_create]
+en = "could not create %{path}"
+ru = "не удалось создать %{path}"
+es = "no se pudo crear %{path}"
+fr = "impossible de créer %{path}"
+de = "%{path} konnte nicht erstellt werden"
+
+[install.could_not_open]
+en = "could not open %{path}"
+ru = "не удалось открыть %{path}"
+es = "no se pudo abrir %{path}"
+fr = "impossible d'ouvrir %{path}"
+de = "%{path} konnte nicht geöffnet werden"
+
+[install.could_not_write_to]
+en = "could not write to %{path}"
+ru = "не удалось записать в %{path}"
+es = "no se pudo escribir en %{path}"
+fr = "impossible d'écrire dans %{path}"
+de = "in %{path} konnte nicht geschrieben werden"
+
+[install.no_home_directory]
+en = "could not determine your home directory"
+ru = "не удалось определить ваш домашний каталог"
+es = "no se pudo determinar su directorio personal"
+fr = "impossible de déterminer votre répertoire personnel"
+de = "Ihr Benutzerverzeichnis konnte nicht ermittelt werden"
+
+[install.no_cmd_wrapper]
+en = "a cmd.exe wrapper is not possible — see the note above"
+ru = "обёртка для cmd.exe невозможна — см. замечание выше"
+es = "no es posible un envoltorio para cmd.exe — vea la nota anterior"
+fr = "une enveloppe pour cmd.exe est impossible — voir la note ci-dessus"
+de = "ein Wrapper für cmd.exe ist nicht möglich — siehe den Hinweis oben"
+
+# PowerShell
+[install.run_from_powershell]
+en = "%{err}\nRun this from PowerShell, or add the line by hand:\n    %{hint}"
+ru = "%{err}\nЗапустите это из PowerShell или добавьте строку вручную:\n    %{hint}"
+es = "%{err}\nEjecute esto desde PowerShell o añada la línea a mano:\n    %{hint}"
+fr = "%{err}\nExécutez ceci depuis PowerShell, ou ajoutez la ligne à la main :\n    %{hint}"
+de = "%{err}\nFühren Sie dies in PowerShell aus, oder fügen Sie die Zeile von Hand hinzu:\n    %{hint}"
+
+[install.no_profile_path]
+en = "`%{binary}` reported no $PROFILE path.\nAdd the line by hand:\n    %{hint}"
+ru = "`%{binary}` не сообщил путь $PROFILE.\nДобавьте строку вручную:\n    %{hint}"
+es = "`%{binary}` no indicó ninguna ruta $PROFILE.\nAñada la línea a mano:\n    %{hint}"
+fr = "`%{binary}` n'a indiqué aucun chemin $PROFILE.\nAjoutez la ligne à la main :\n    %{hint}"
+de = "`%{binary}` hat keinen $PROFILE-Pfad gemeldet.\nFügen Sie die Zeile von Hand hinzu:\n    %{hint}"
+
+[install.could_not_launch]
+en = "could not launch `%{binary}`"
+ru = "не удалось запустить `%{binary}`"
+es = "no se pudo iniciar `%{binary}`"
+fr = "impossible de lancer `%{binary}`"
+de = "`%{binary}` konnte nicht gestartet werden"
+
+[install.command_failed]
+en = "`%{binary}` failed on `%{command}`: %{stderr}"
+ru = "`%{binary}` завершился с ошибкой на `%{command}`: %{stderr}"
+es = "`%{binary}` falló en `%{command}`: %{stderr}"
+fr = "`%{binary}` a échoué sur `%{command}` : %{stderr}"
+de = "`%{binary}` ist bei `%{command}` fehlgeschlagen: %{stderr}"
+
+[install.policy_unreadable]
+en = "Note: could not read the execution policy (%{err})."
+ru = "Замечание: не удалось прочитать политику выполнения (%{err})."
+es = "Nota: no se pudo leer la directiva de ejecución (%{err})."
+fr = "Remarque : impossible de lire la stratégie d'exécution (%{err})."
+de = "Hinweis: Die Ausführungsrichtlinie konnte nicht gelesen werden (%{err})."
+
+[install.policy_blocks_profile]
+en = "PowerShell will not load %{path}: the execution policy a new session\nstarts with is %{policy}, so no .ps1 file runs at all."
+ru = "PowerShell не загрузит %{path}: новая сессия стартует с политикой выполнения\n%{policy}, поэтому ни один файл .ps1 не запускается."
+es = "PowerShell no cargará %{path}: la directiva de ejecución con la que arranca\nuna sesión nueva es %{policy}, así que ningún archivo .ps1 se ejecuta."
+fr = "PowerShell ne chargera pas %{path} : la stratégie d'exécution d'une nouvelle\nsession est %{policy}, donc aucun fichier .ps1 ne s'exécute."
+de = "PowerShell lädt %{path} nicht: Eine neue Sitzung startet mit der\nAusführungsrichtlinie %{policy}, sodass keine .ps1-Datei ausgeführt wird."
+
+[install.policy_explanation]
+en = "\n%{policy} lets your own local scripts run and still blocks unsigned\nscripts downloaded from the internet. It applies to your user account\nonly and needs no administrator rights."
+ru = "\n%{policy} разрешает запуск ваших локальных скриптов и по-прежнему блокирует\nнеподписанные скрипты, скачанные из интернета. Действует только для вашей\nучётной записи и не требует прав администратора."
+es = "\n%{policy} permite ejecutar sus propios scripts locales y sigue bloqueando\nlos scripts sin firmar descargados de internet. Se aplica solo a su cuenta\nde usuario y no requiere permisos de administrador."
+fr = "\n%{policy} autorise vos propres scripts locaux et continue de bloquer les\nscripts non signés téléchargés depuis internet. Cela ne concerne que votre\ncompte utilisateur et ne demande aucun droit d'administrateur."
+de = "\n%{policy} lässt Ihre eigenen lokalen Skripte zu und blockiert weiterhin\nunsignierte Skripte aus dem Internet. Es gilt nur für Ihr Benutzerkonto\nund erfordert keine Administratorrechte."
+
+[install.set_policy_now]
+en = "Run `Set-ExecutionPolicy %{policy} -Scope CurrentUser` now?"
+ru = "Выполнить `Set-ExecutionPolicy %{policy} -Scope CurrentUser` сейчас?"
+es = "¿Ejecutar `Set-ExecutionPolicy %{policy} -Scope CurrentUser` ahora?"
+fr = "Exécuter `Set-ExecutionPolicy %{policy} -Scope CurrentUser` maintenant ?"
+de = "`Set-ExecutionPolicy %{policy} -Scope CurrentUser` jetzt ausführen?"
+
+[install.policy_left_unchanged]
+en = "Left unchanged. The wrapper starts working once you run:"
+ru = "Оставлено без изменений. Обёртка заработает, как только вы выполните:"
+es = "Se deja sin cambios. El envoltorio funcionará en cuanto ejecute:"
+fr = "Laissé inchangé. L'enveloppe fonctionnera dès que vous exécuterez :"
+de = "Unverändert gelassen. Der Wrapper funktioniert, sobald Sie ausführen:"
+
+[install.policy_enforced]
+en = "the policy is still %{policy} — an administrator is enforcing it through Group Policy.\n`Get-ExecutionPolicy -List` shows which scope, and only that scope can lift it."
+ru = "политика по-прежнему %{policy} — её навязывает администратор через групповую политику.\n`Get-ExecutionPolicy -List` покажет область, и снять её можно только там."
+es = "la directiva sigue siendo %{policy} — un administrador la impone mediante directiva de grupo.\n`Get-ExecutionPolicy -List` muestra en qué ámbito, y solo ese ámbito puede levantarla."
+fr = "la stratégie est toujours %{policy} — un administrateur l'impose via une stratégie de groupe.\n`Get-ExecutionPolicy -List` indique la portée, et seule cette portée peut la lever."
+de = "die Richtlinie ist weiterhin %{policy} — ein Administrator erzwingt sie per Gruppenrichtlinie.\n`Get-ExecutionPolicy -List` zeigt den Bereich, und nur dieser Bereich kann sie aufheben."
+
+[install.policy_now_set]
+en = "Execution policy for the current user is now %{policy}."
+ru = "Политика выполнения для текущего пользователя теперь %{policy}."
+es = "La directiva de ejecución para el usuario actual es ahora %{policy}."
+fr = "La stratégie d'exécution pour l'utilisateur actuel est maintenant %{policy}."
+de = "Die Ausführungsrichtlinie für den aktuellen Benutzer ist jetzt %{policy}."
+
+# Printed by `plz hook cmd`, whose output may be redirected into a .bat file:
+# every line must stay commented with `@rem `, or the file becomes executable.
+# A test checks that in all languages.
+[install.cmd_explanation]
+en = """
+@rem There is no wrapper for cmd.exe.
+@rem
+@rem cmd.exe has no functions, and doskey macros can neither branch nor read the
+@rem result file, so they cannot run the command in the current session.
+@rem
+@rem plz works in cmd.exe without a wrapper: the command runs in a child
+@rem process. Only commands that change the session's own state (cd, set) have
+@rem no effect; run those by hand. plz warns you when that happens.
+@rem
+@rem For the full experience, use PowerShell instead:
+@rem     plz hook powershell --install
+"""
+ru = """
+@rem Обёртки для cmd.exe не существует.
+@rem
+@rem В cmd.exe нет функций, а макросы doskey не умеют ни ветвиться, ни читать
+@rem файл результата, поэтому выполнить команду в текущей сессии они не могут.
+@rem
+@rem plz работает в cmd.exe и без обёртки: команда выполняется в дочернем
+@rem процессе. Не действуют только команды, меняющие состояние самой сессии
+@rem (cd, set) — их выполняйте вручную. plz предупредит, когда это случится.
+@rem
+@rem Чтобы получить все возможности, используйте PowerShell:
+@rem     plz hook powershell --install
+"""
+es = """
+@rem No existe un envoltorio para cmd.exe.
+@rem
+@rem cmd.exe no tiene funciones, y las macros doskey no pueden ramificarse ni
+@rem leer el archivo de resultado, así que no pueden ejecutar el comando en la
+@rem sesión actual.
+@rem
+@rem plz funciona en cmd.exe sin envoltorio: el comando se ejecuta en un proceso
+@rem hijo. Solo los comandos que cambian el estado de la propia sesión (cd, set)
+@rem no surten efecto; ejecútelos a mano. plz le avisa cuando ocurre.
+@rem
+@rem Para la experiencia completa, use PowerShell:
+@rem     plz hook powershell --install
+"""
+fr = """
+@rem Il n'existe pas d'enveloppe pour cmd.exe.
+@rem
+@rem cmd.exe n'a pas de fonctions, et les macros doskey ne savent ni brancher ni
+@rem lire le fichier de résultat : elles ne peuvent donc pas exécuter la commande
+@rem dans la session courante.
+@rem
+@rem plz fonctionne dans cmd.exe sans enveloppe : la commande s'exécute dans un
+@rem processus enfant. Seules les commandes qui modifient l'état de la session
+@rem elle-même (cd, set) restent sans effet ; lancez-les à la main. plz vous
+@rem prévient quand cela arrive.
+@rem
+@rem Pour l'expérience complète, utilisez PowerShell :
+@rem     plz hook powershell --install
+"""
+de = """
+@rem Für cmd.exe gibt es keinen Wrapper.
+@rem
+@rem cmd.exe kennt keine Funktionen, und doskey-Makros können weder verzweigen
+@rem noch die Ergebnisdatei lesen — sie können den Befehl also nicht in der
+@rem aktuellen Sitzung ausführen.
+@rem
+@rem plz funktioniert in cmd.exe auch ohne Wrapper: Der Befehl läuft in einem
+@rem Kindprozess. Nur Befehle, die den Zustand der Sitzung selbst ändern
+@rem (cd, set), bleiben wirkungslos; führen Sie diese von Hand aus. plz weist
+@rem Sie darauf hin, wenn das passiert.
+@rem
+@rem Für den vollen Funktionsumfang verwenden Sie PowerShell:
+@rem     plz hook powershell --install
+"""

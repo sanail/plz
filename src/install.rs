@@ -14,6 +14,8 @@ use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use rust_i18n::t;
+
 use crate::cli::Shell;
 use crate::context::{self, ShellKind};
 use crate::input;
@@ -63,40 +65,44 @@ fn add_line(target: &Path, line: &str, assume_yes: bool) -> Result<Outcome> {
         Ok(text) => Some(text),
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => None,
         Err(err) => {
-            return Err(err).with_context(|| format!("could not read {}", target.display()))
+            return Err(err)
+                .with_context(|| t!("errors.could_not_read", path = target.display()).to_string())
         }
     };
 
     if existing.as_deref().is_some_and(|text| contains(text, line)) {
-        println!("Already installed in {}.", target.display());
+        println!(
+            "{}",
+            t!("install.already_installed", path = target.display())
+        );
         return Ok(Outcome::AlreadyPresent);
     }
 
-    println!("File: {}", target.display());
-    println!("Line: {line}");
-    if !assume_yes && !input::confirm("Add it?")? {
-        println!("Nothing was written.");
+    println!("{}", t!("install.file", path = target.display()));
+    println!("{}", t!("install.line", line = line));
+    if !assume_yes && !input::confirm(&t!("install.add_it"))? {
+        println!("{}", t!("install.nothing_written"));
         return Ok(Outcome::Declined);
     }
 
     if let Some(parent) = target.parent() {
         std::fs::create_dir_all(parent)
-            .with_context(|| format!("could not create {}", parent.display()))?;
+            .with_context(|| t!("install.could_not_create", path = parent.display()).to_string())?;
     }
 
     let mut file = std::fs::OpenOptions::new()
         .append(true)
         .create(true)
         .open(target)
-        .with_context(|| format!("could not open {}", target.display()))?;
+        .with_context(|| t!("install.could_not_open", path = target.display()).to_string())?;
     // UTF-8 without a BOM. The line is pure ASCII, so every shell that reads
     // the file — including PowerShell 5.1, which treats a BOM-less file as
     // ANSI — sees the same bytes.
     file.write_all(appendix(existing.as_deref().unwrap_or(""), line).as_bytes())
-        .with_context(|| format!("could not write to {}", target.display()))?;
+        .with_context(|| t!("install.could_not_write_to", path = target.display()).to_string())?;
 
-    println!("Added to {}.", target.display());
-    println!("Open a new shell to pick it up.");
+    println!("{}", t!("install.added", path = target.display()));
+    println!("{}", t!("install.open_a_new_shell"));
     Ok(Outcome::Appended)
 }
 
@@ -146,7 +152,7 @@ fn startup_file(shell: Shell) -> Result<PathBuf> {
 fn home() -> Result<PathBuf> {
     directories::BaseDirs::new()
         .map(|dirs| dirs.home_dir().to_path_buf())
-        .ok_or_else(|| anyhow!("could not determine your home directory"))
+        .ok_or_else(|| anyhow!("{}", t!("install.no_home_directory")))
 }
 
 /// Which PowerShell to talk to.
@@ -175,16 +181,17 @@ fn powershell_binary() -> &'static str {
 /// Ask PowerShell where its profile is, rather than reconstructing the path.
 fn powershell_profile() -> Result<PathBuf> {
     let binary = powershell_binary();
+    let hint = integration::install_hint(Shell::Powershell);
     let path = powershell_query(binary, "$PROFILE").map_err(|err| {
         anyhow!(
-            "{err}\nRun this from PowerShell, or add the line by hand:\n    {}",
-            integration::install_hint(Shell::Powershell)
+            "{}",
+            t!("install.run_from_powershell", err = err, hint = hint)
         )
     })?;
     if path.is_empty() {
         return Err(anyhow!(
-            "`{binary}` reported no $PROFILE path.\nAdd the line by hand:\n    {}",
-            integration::install_hint(Shell::Powershell)
+            "{}",
+            t!("install.no_profile_path", binary = binary, hint = hint)
         ));
     }
     Ok(PathBuf::from(path))
@@ -198,13 +205,18 @@ fn powershell_query(binary: &str, command: &str) -> Result<String> {
     let output = Command::new(binary)
         .args(["-NoProfile", "-NonInteractive", "-Command", command])
         .output()
-        .with_context(|| format!("could not launch `{binary}`"))?;
+        .with_context(|| t!("install.could_not_launch", binary = binary).to_string())?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(anyhow!(
-            "`{binary}` failed on `{command}`: {}",
-            stderr.trim()
+            "{}",
+            t!(
+                "install.command_failed",
+                binary = binary,
+                command = command,
+                stderr = stderr.trim()
+            )
         ));
     }
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
@@ -220,7 +232,7 @@ fn ensure_execution_policy(profile: &Path, assume_yes: bool) -> Result<()> {
         // Not being able to read the policy is not a failure to install: the
         // line is in the profile either way.
         Err(err) => {
-            eprintln!("Note: could not read the execution policy ({err}).");
+            eprintln!("{}", t!("install.policy_unreadable", err = err));
             return Ok(());
         }
     };
@@ -231,19 +243,21 @@ fn ensure_execution_policy(profile: &Path, assume_yes: bool) -> Result<()> {
 
     println!();
     println!(
-        "PowerShell will not load {}: the execution policy a new session\n\
-         starts with is {policy}, so no .ps1 file runs at all.",
-        profile.display()
+        "{}",
+        t!(
+            "install.policy_blocks_profile",
+            path = profile.display(),
+            policy = policy
+        )
     );
     println!(
-        "\n{WANTED_POLICY} lets your own local scripts run and still blocks unsigned\n\
-         scripts downloaded from the internet. It applies to your user account\n\
-         only and needs no administrator rights."
+        "{}",
+        t!("install.policy_explanation", policy = WANTED_POLICY)
     );
 
-    let prompt = format!("Run `Set-ExecutionPolicy {WANTED_POLICY} -Scope CurrentUser` now?");
+    let prompt = t!("install.set_policy_now", policy = WANTED_POLICY);
     if !assume_yes && !input::confirm(&prompt)? {
-        println!("Left unchanged. The wrapper starts working once you run:");
+        println!("{}", t!("install.policy_left_unchanged"));
         println!("    Set-ExecutionPolicy {WANTED_POLICY} -Scope CurrentUser");
         return Ok(());
     }
@@ -257,12 +271,9 @@ fn ensure_execution_policy(profile: &Path, assume_yes: bool) -> Result<()> {
     // CurrentUser, and the command above reports success regardless.
     let now = settled_policy(&powershell_query(binary, PERSISTENT_POLICY)?);
     if policy_blocks_profile(&now) {
-        return Err(anyhow!(
-            "the policy is still {now} — an administrator is enforcing it through Group Policy.\n\
-             `Get-ExecutionPolicy -List` shows which scope, and only that scope can lift it."
-        ));
+        return Err(anyhow!("{}", t!("install.policy_enforced", policy = now)));
     }
-    println!("Execution policy for the current user is now {now}.");
+    println!("{}", t!("install.policy_now_set", policy = now));
     Ok(())
 }
 

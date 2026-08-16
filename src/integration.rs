@@ -5,6 +5,8 @@
 //! venv activation change the session the user is sitting in — a child process
 //! cannot hand its state back to its parent, which is an OS constraint.
 
+use rust_i18n::t;
+
 use crate::cli::Shell;
 use crate::context::ShellKind;
 
@@ -32,48 +34,33 @@ pub fn startup_line(shell: Shell) -> Option<&'static str> {
 }
 
 /// The text `plz hook <shell>` prints to stdout.
-pub fn script(shell: Shell) -> &'static str {
+///
+/// The four real scripts are shipped as files and stay in English; only the
+/// cmd.exe placeholder is prose, and it is translated.
+pub fn script(shell: Shell) -> String {
     match shell {
-        Shell::Zsh => ZSH,
-        Shell::Bash => BASH,
-        Shell::Fish => FISH,
-        Shell::Powershell => POWERSHELL,
-        Shell::Cmd => CMD_EXPLANATION,
+        Shell::Zsh => ZSH.to_string(),
+        Shell::Bash => BASH.to_string(),
+        Shell::Fish => FISH.to_string(),
+        Shell::Powershell => POWERSHELL.to_string(),
+        Shell::Cmd => t!("install.cmd_explanation").to_string(),
     }
 }
 
-/// There is no wrapper for cmd.exe.
-///
-/// cmd has no functions, and a `doskey` macro can neither branch, nor read a
-/// file, nor execute an arbitrary string — that is, it can do none of the things
-/// a wrapper exists for. Explaining that is more honest than shipping a script
-/// that silently does nothing.
-const CMD_EXPLANATION: &str = r#"@rem There is no wrapper for cmd.exe.
-@rem
-@rem cmd.exe has no functions, and doskey macros can neither branch nor read the
-@rem result file, so they cannot run the command in the current session.
-@rem
-@rem plz works in cmd.exe without a wrapper: the command runs in a child
-@rem process. Only commands that change the session's own state (cd, set) have
-@rem no effect; run those by hand. plz warns you when that happens.
-@rem
-@rem For the full experience, use PowerShell instead:
-@rem     plz hook powershell --install
-"#;
-
 /// How to add the startup line by hand. Printed to stderr so it stays out of
 /// `eval`; `plz hook <shell> --install` does the same thing without the typing.
-pub fn install_hint(shell: Shell) -> &'static str {
+pub fn install_hint(shell: Shell) -> String {
     match shell {
-        Shell::Zsh => "echo 'eval \"$(plz hook zsh)\"' >> ~/.zshrc",
-        Shell::Bash => "echo 'eval \"$(plz hook bash)\"' >> ~/.bashrc",
-        Shell::Fish => "echo 'plz hook fish | source' > ~/.config/fish/conf.d/plz.fish",
+        Shell::Zsh => "echo 'eval \"$(plz hook zsh)\"' >> ~/.zshrc".to_string(),
+        Shell::Bash => "echo 'eval \"$(plz hook bash)\"' >> ~/.bashrc".to_string(),
+        Shell::Fish => "echo 'plz hook fish | source' > ~/.config/fish/conf.d/plz.fish".to_string(),
         // Add-Content rather than `>>`: in Windows PowerShell 5.1 the redirect
         // writes UTF-16LE, which corrupts an existing UTF-8 profile.
         Shell::Powershell => {
             "Add-Content $PROFILE 'plz hook powershell | Out-String | Invoke-Expression'"
+                .to_string()
         }
-        Shell::Cmd => "a cmd.exe wrapper is not possible — see the note above",
+        Shell::Cmd => t!("install.no_cmd_wrapper").to_string(),
     }
 }
 
@@ -178,12 +165,20 @@ mod tests {
 
     #[test]
     fn cmd_output_is_commented_out_so_it_cannot_be_executed() {
-        // The output may end up in a .bat file, so it must be inert.
-        for line in script(Shell::Cmd).lines().filter(|l| !l.trim().is_empty()) {
-            assert!(
-                line.starts_with("@rem"),
-                "executable line in the placeholder: {line}"
-            );
+        // The output may end up in a .bat file, so it must be inert. Checked in
+        // every language: a translator dropping one `@rem ` turns a comment
+        // into a line cmd.exe would run.
+        let _guard = crate::testutil::locale_guard();
+        for lang in crate::i18n::Lang::ALL {
+            rust_i18n::set_locale(lang.code());
+            let text = script(Shell::Cmd);
+            assert!(!text.trim().is_empty(), "{lang:?}");
+            for line in text.lines().filter(|l| !l.trim().is_empty()) {
+                assert!(
+                    line.starts_with("@rem"),
+                    "{lang:?}: executable line in the placeholder: {line}"
+                );
+            }
         }
     }
 

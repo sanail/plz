@@ -66,9 +66,10 @@ fn run() -> Result<()> {
             // startup files hold exactly such a line, so a hint keyed on stderr
             // prints on every shell start.
             if std::io::stdout().is_terminal() {
-                eprintln!("\n# To install: {}", integration::install_hint(*shell));
+                let hint = integration::install_hint(*shell);
+                eprintln!("\n# {}", t!("install.to_install", hint = hint));
                 if integration::startup_line(*shell).is_some() {
-                    eprintln!("# Or let plz do it: plz hook {} --install", shell.arg());
+                    eprintln!("# {}", t!("install.or_let_plz_do_it", shell = shell.arg()));
                 }
             }
             Ok(())
