@@ -21,6 +21,7 @@ use ratatui::{Frame, Terminal};
 use crate::context::Context;
 use crate::provider::Provider;
 use crate::suggestion::Suggestion;
+use crate::ui::editor::LineEditor;
 use crate::ui::Outcome;
 
 /// How often the spinner is redrawn while waiting for a reply.
@@ -49,7 +50,7 @@ enum Screen {
 }
 
 struct App {
-    query: String,
+    query: LineEditor,
     screen: Screen,
     suggestions: Vec<Suggestion>,
     spinner: usize,
@@ -80,7 +81,7 @@ pub fn run(
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App {
-        query: String::new(),
+        query: LineEditor::default(),
         screen: Screen::Editing,
         suggestions: Vec::new(),
         spinner: 0,
@@ -149,20 +150,42 @@ fn event_loop(
             continue;
         }
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        let alt = key.modifiers.contains(KeyModifiers::ALT);
+        // A letter chord is Ctrl alone: Ctrl+Alt is how AltGr arrives, and that
+        // is someone typing a character, not reaching for a shortcut.
+        let chord = ctrl && !alt;
 
         match &mut app.screen {
+            // Terminals disagree about which movement keys they send at all —
+            // Terminal.app has no Ctrl+arrows, a bare console has no Alt — so
+            // every movement answers to several keys, with the Ctrl+letter pair
+            // as the one that works everywhere.
             Screen::Editing => match key.code {
                 KeyCode::Esc => return Ok(Outcome::Cancel),
-                KeyCode::Char('c' | 'd') if ctrl => return Ok(Outcome::Cancel),
-                KeyCode::Enter if !app.query.trim().is_empty() => {
-                    app.screen = spawn_request(&provider, &ctx, &app.query, app.count);
+                KeyCode::Char('c' | 'd') if chord => return Ok(Outcome::Cancel),
+                KeyCode::Enter if !app.query.is_blank() => {
+                    app.screen = spawn_request(&provider, &ctx, app.query.text(), app.count);
                 }
-                KeyCode::Backspace => {
-                    app.query.pop();
-                }
-                // Only bare characters are text: without the guard an unbound
-                // chord like Ctrl+X would silently type an "x" into the query.
-                KeyCode::Char(c) if !ctrl => app.query.push(c),
+
+                KeyCode::Left if ctrl || alt => app.query.word_left(),
+                KeyCode::Right if ctrl || alt => app.query.word_right(),
+                KeyCode::Char('b') if alt => app.query.word_left(),
+                KeyCode::Char('f') if alt => app.query.word_right(),
+                KeyCode::Left => app.query.left(),
+                KeyCode::Right => app.query.right(),
+                KeyCode::Home => app.query.home(),
+                KeyCode::End => app.query.end(),
+                KeyCode::Char('a') if chord => app.query.home(),
+                KeyCode::Char('e') if chord => app.query.end(),
+
+                KeyCode::Backspace if ctrl || alt => app.query.delete_word_back(),
+                KeyCode::Char('w') if chord => app.query.delete_word_back(),
+                KeyCode::Char('u') if chord => app.query.kill_to_start(),
+                KeyCode::Char('k') if chord => app.query.kill_to_end(),
+                KeyCode::Backspace => app.query.backspace(),
+                KeyCode::Delete => app.query.delete(),
+
+                KeyCode::Char(c) if is_text(key.modifiers) => app.query.insert_char(c),
                 _ => {}
             },
 
@@ -194,7 +217,7 @@ fn event_loop(
                         app.screen = Screen::Editing;
                     }
                     KeyCode::Char('r') if ctrl => {
-                        app.screen = spawn_request(&provider, &ctx, &app.query, app.count);
+                        app.screen = spawn_request(&provider, &ctx, app.query.text(), app.count);
                     }
                     KeyCode::Esc | KeyCode::Char('q') => return Ok(Outcome::Cancel),
                     KeyCode::Char('c') => return Ok(Outcome::Copy(*selected)),
@@ -225,6 +248,18 @@ fn event_loop(
     }
 }
 
+/// Whether a `Char` event is text the user typed rather than a chord.
+///
+/// Without the check an unbound chord like Ctrl+X would silently type an "x"
+/// into the query. Ctrl and Alt together are the exception: that is how AltGr
+/// reaches a Windows console, and it is what types `@`, `€` or `ą` on layouts
+/// outside the US one.
+fn is_text(modifiers: KeyModifiers) -> bool {
+    let ctrl = modifiers.contains(KeyModifiers::CONTROL);
+    let alt = modifiers.contains(KeyModifiers::ALT);
+    ctrl == alt
+}
+
 /// Send the request off to a background thread.
 ///
 /// Blocking HTTP on a separate thread rather than async: a single task for the
@@ -251,7 +286,7 @@ fn spawn_request(
     }
 }
 
-fn draw(frame: &mut Frame, app: &App) {
+fn draw(frame: &mut Frame, app: &mut App) {
     let areas = Layout::vertical([
         Constraint::Length(3), // query input
         Constraint::Min(3),    // suggestion list or message
@@ -264,30 +299,12 @@ fn draw(frame: &mut Frame, app: &App) {
     draw_hints(frame, app, areas[2]);
 }
 
-/// The tail of the query that fits in the input box, and the cursor's column
-/// within it.
-///
-/// Only the start can be scrolled away: the editor appends and backspaces, and
-/// offers no way to move the cursor into the middle of the text. One column is
-/// held back for the cursor itself, or it would sit on the border.
-///
-/// Counted in characters rather than display columns, like the rest of the UI.
-fn visible_query(query: &str, inner_width: u16) -> (String, u16) {
-    let room = (inner_width as usize).saturating_sub(1);
-    let length = query.chars().count();
-    let offset = length.saturating_sub(room);
-    (
-        query.chars().skip(offset).collect(),
-        (length - offset) as u16,
-    )
-}
-
-fn draw_query(frame: &mut Frame, app: &App, area: ratatui::layout::Rect) {
+fn draw_query(frame: &mut Frame, app: &mut App, area: ratatui::layout::Rect) {
     // The width comes from the terminal and in degenerate cases (a freshly
     // opened pty, a window a couple of columns wide) can be zero, so subtract
     // with saturation rather than plain minus.
     let inner_width = area.width.saturating_sub(2);
-    let (visible, cursor_offset) = visible_query(&app.query, inner_width);
+    let (visible, cursor_offset) = app.query.visible(inner_width);
 
     let input = Paragraph::new(visible.as_str()).block(
         Block::default()
@@ -400,40 +417,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_short_query_is_shown_whole() {
-        let (visible, cursor) = visible_query("find big files", 40);
-        assert_eq!(visible, "find big files");
-        assert_eq!(cursor, 14);
+    fn a_bare_character_is_text() {
+        assert!(is_text(KeyModifiers::NONE));
+        assert!(is_text(KeyModifiers::SHIFT));
     }
 
     #[test]
-    fn a_long_query_scrolls_to_keep_the_end_in_view() {
-        // Typing past the right edge used to leave the user writing blind.
-        let query = "abcdefghijklmnopqrstuvwxyz";
-        let (visible, cursor) = visible_query(query, 10);
-        assert_eq!(visible, "rstuvwxyz");
-        assert_eq!(
-            visible.chars().count(),
-            9,
-            "one column is left for the cursor"
-        );
-        assert_eq!(cursor, 9);
+    fn a_chord_is_not_text() {
+        assert!(!is_text(KeyModifiers::CONTROL));
+        assert!(!is_text(KeyModifiers::ALT));
+        assert!(!is_text(KeyModifiers::ALT | KeyModifiers::SHIFT));
     }
 
     #[test]
-    fn the_cursor_never_leaves_the_box() {
-        for width in 0..40u16 {
-            let (visible, cursor) = visible_query("a rather long query indeed", width);
-            assert!(cursor <= width, "cursor {cursor} past width {width}");
-            assert!(visible.chars().count() <= width as usize);
-        }
-    }
-
-    #[test]
-    fn scrolling_counts_characters_not_bytes() {
-        // Slicing these on bytes would both cut too much and panic mid-character.
-        let (visible, cursor) = visible_query("покажи занятое место на диске", 10);
-        assert_eq!(visible, " на диске");
-        assert_eq!(cursor, 9);
+    fn altgr_types_a_character() {
+        // A Windows console reports AltGr as Ctrl+Alt, and that is the only
+        // way to type `@` or `€` on a good half of the world's layouts.
+        assert!(is_text(KeyModifiers::CONTROL | KeyModifiers::ALT));
     }
 }
