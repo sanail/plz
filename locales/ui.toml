@@ -17,6 +17,15 @@ es = "copiado mediante el terminal (OSC 52)"
 fr = "copié via le terminal (OSC 52)"
 de = "über das Terminal kopiert (OSC 52)"
 
+# The whole line, not just the label: French puts a space before its colon, and
+# the trailing period is a convention rather than a universal.
+[ui.warning]
+en = "Warning: %{reason}."
+ru = "Внимание: %{reason}."
+es = "Advertencia: %{reason}."
+fr = "Attention : %{reason}."
+de = "Warnung: %{reason}."
+
 [ui.run_it]
 en = "Run it?"
 ru = "Выполнить?"

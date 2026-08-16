@@ -199,7 +199,7 @@ fn execute(cli: &Cli, config: &Config, ctx: &Context, suggestion: &Suggestion) -
     if config.behavior.confirm_dangerous && !cli.yes {
         let risk = safety::classify(command);
         if let Some(reason) = risk.reason() {
-            eprintln!("Warning: {reason}.");
+            eprintln!("{}", t!("ui.warning", reason = reason.text()));
             eprintln!("  {command}");
             if !input::confirm(&t!("ui.run_it"))? {
                 eprintln!("{}", t!("ui.cancelled"));

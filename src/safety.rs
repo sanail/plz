@@ -5,57 +5,92 @@
 //! hits the wrong digit in the suggestion list, not to defend against a
 //! malicious model.
 
+use rust_i18n::t;
+
+/// Why a command was flagged.
+///
+/// An identity rather than the sentence itself: the sentence is translated, and
+/// callers compare and match on the rule, not on its wording.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reason {
+    RecursiveDelete,
+    DdOverwrite,
+    Mkfs,
+    BlockDevice,
+    CurlPipeShell,
+    ForkBomb,
+    RecklessChmod,
+    Shutdown,
+    ForcePush,
+    DestructiveSql,
+    PowerShellRecursiveDelete,
+    PowerShellFormat,
+    CmdRecursiveDelete,
+    DiskPartitioning,
+}
+
+impl Reason {
+    /// The sentence the warning shows.
+    pub fn text(self) -> String {
+        let key = match self {
+            Reason::RecursiveDelete => "safety.recursive_delete",
+            Reason::DdOverwrite => "safety.dd_overwrite",
+            Reason::Mkfs => "safety.mkfs",
+            Reason::BlockDevice => "safety.block_device",
+            Reason::CurlPipeShell => "safety.curl_pipe_shell",
+            Reason::ForkBomb => "safety.fork_bomb",
+            Reason::RecklessChmod => "safety.reckless_chmod",
+            Reason::Shutdown => "safety.shutdown",
+            Reason::ForcePush => "safety.force_push",
+            Reason::DestructiveSql => "safety.destructive_sql",
+            Reason::PowerShellRecursiveDelete => "safety.powershell_recursive_delete",
+            Reason::PowerShellFormat => "safety.powershell_format",
+            Reason::CmdRecursiveDelete => "safety.cmd_recursive_delete",
+            Reason::DiskPartitioning => "safety.disk_partitioning",
+        };
+        t!(key).to_string()
+    }
+}
+
 /// How risky a command looks.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Risk {
     Safe,
-    /// A rule matched; its description is what the warning shows.
-    Dangerous(&'static str),
+    /// A rule matched; which one decides what the warning says.
+    Dangerous(Reason),
 }
 
 impl Risk {
-    pub fn reason(&self) -> Option<&'static str> {
+    pub fn reason(&self) -> Option<Reason> {
         match self {
-            Risk::Dangerous(reason) => Some(reason),
+            Risk::Dangerous(reason) => Some(*reason),
             Risk::Safe => None,
         }
     }
 }
 
-/// A rule: the description shown to the user, plus a predicate over the
-/// normalized command.
-type Rule = (&'static str, fn(&str) -> bool);
+/// A rule: which reason it reports, plus a predicate over the normalized
+/// command.
+type Rule = (Reason, fn(&str) -> bool);
 
 const RULES: &[Rule] = &[
+    (Reason::RecursiveDelete, is_dangerous_rm),
+    (Reason::DdOverwrite, is_dangerous_dd),
+    (Reason::Mkfs, is_mkfs),
+    (Reason::BlockDevice, writes_to_block_device),
+    (Reason::CurlPipeShell, is_curl_pipe_shell),
+    (Reason::ForkBomb, is_fork_bomb),
+    (Reason::RecklessChmod, is_reckless_chmod),
+    (Reason::Shutdown, is_shutdown),
+    (Reason::ForcePush, is_force_push),
+    (Reason::DestructiveSql, is_destructive_sql),
     (
-        "recursive deletion of a critical directory",
-        is_dangerous_rm,
-    ),
-    ("overwriting a disk device with dd", is_dangerous_dd),
-    ("formatting a filesystem", is_mkfs),
-    ("writing straight to a block device", writes_to_block_device),
-    (
-        "running a script downloaded from the internet",
-        is_curl_pipe_shell,
-    ),
-    ("fork bomb", is_fork_bomb),
-    (
-        "removing all access restrictions on a system directory",
-        is_reckless_chmod,
-    ),
-    ("shutting down or rebooting the machine", is_shutdown),
-    (
-        "force-overwriting history in a remote repository",
-        is_force_push,
-    ),
-    ("destroying data in a database", is_destructive_sql),
-    (
-        "recursive deletion in PowerShell",
+        Reason::PowerShellRecursiveDelete,
         is_powershell_recursive_delete,
     ),
-    ("formatting a volume in PowerShell", is_powershell_format),
-    ("recursive deletion in cmd.exe", is_cmd_recursive_delete),
-    ("editing disk partitions", is_disk_partitioning),
+    (Reason::PowerShellFormat, is_powershell_format),
+    (Reason::CmdRecursiveDelete, is_cmd_recursive_delete),
+    (Reason::DiskPartitioning, is_disk_partitioning),
 ];
 
 /// Classify a command. The first matching rule wins.
@@ -63,7 +98,7 @@ pub fn classify(command: &str) -> Risk {
     let normalized = normalize(command);
     for (reason, matches) in RULES {
         if matches(&normalized) {
-            return Risk::Dangerous(reason);
+            return Risk::Dangerous(*reason);
         }
     }
     Risk::Safe
@@ -684,12 +719,25 @@ mod tests {
 
     #[test]
     fn reason_is_reported_for_dangerous_commands() {
-        let risk = classify("rm -rf /");
-        assert_eq!(
-            risk.reason(),
-            Some("recursive deletion of a critical directory")
-        );
+        // The rule itself, not its wording: the sentence is translated, so a
+        // string comparison here would only be asserting the English column.
+        assert_eq!(classify("rm -rf /").reason(), Some(Reason::RecursiveDelete));
+        assert_eq!(classify("shutdown -h now").reason(), Some(Reason::Shutdown));
         assert_eq!(classify("ls").reason(), None);
+    }
+
+    #[test]
+    fn every_reason_has_a_sentence_of_its_own() {
+        // A rule added without its catalogue entry comes back from `t!` as the
+        // bare key, which would then be shown to the user as the warning.
+        let mut seen = Vec::new();
+        for (reason, _) in RULES {
+            let text = reason.text();
+            assert!(!text.starts_with("safety."), "{reason:?}: {text}");
+            assert!(!seen.contains(&text), "{reason:?} repeats an earlier text");
+            seen.push(text);
+        }
+        assert_eq!(seen.len(), RULES.len());
     }
 
     #[test]

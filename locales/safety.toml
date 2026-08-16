@@ -1,0 +1,103 @@
+# Why a command was flagged, shown as the tail of the warning line.
+#
+# Each entry is a noun phrase completing "Warning: …" — not a sentence, and not
+# a command. See locales/errors.toml for the rules every catalogue follows.
+_version = 2
+
+[safety.recursive_delete]
+en = "recursive deletion of a critical directory"
+ru = "рекурсивное удаление критически важного каталога"
+es = "eliminación recursiva de un directorio crítico"
+fr = "suppression récursive d'un répertoire critique"
+de = "rekursives Löschen eines kritischen Verzeichnisses"
+
+[safety.dd_overwrite]
+en = "overwriting a disk device with dd"
+ru = "перезапись дискового устройства через dd"
+es = "sobrescritura de un dispositivo de disco con dd"
+fr = "écrasement d'un périphérique disque avec dd"
+de = "Überschreiben eines Laufwerks mit dd"
+
+[safety.mkfs]
+en = "formatting a filesystem"
+ru = "форматирование файловой системы"
+es = "formateo de un sistema de archivos"
+fr = "formatage d'un système de fichiers"
+de = "Formatieren eines Dateisystems"
+
+[safety.block_device]
+en = "writing straight to a block device"
+ru = "запись напрямую в блочное устройство"
+es = "escritura directa en un dispositivo de bloques"
+fr = "écriture directe sur un périphérique bloc"
+de = "direktes Schreiben auf ein Blockgerät"
+
+[safety.curl_pipe_shell]
+en = "running a script downloaded from the internet"
+ru = "запуск скрипта, скачанного из интернета"
+es = "ejecución de un script descargado de internet"
+fr = "exécution d'un script téléchargé depuis internet"
+de = "Ausführen eines aus dem Internet geladenen Skripts"
+
+[safety.fork_bomb]
+en = "fork bomb"
+ru = "форк-бомба"
+es = "bomba fork"
+fr = "bombe fork"
+de = "Fork-Bombe"
+
+[safety.reckless_chmod]
+en = "removing all access restrictions on a system directory"
+ru = "снятие всех ограничений доступа с системного каталога"
+es = "eliminación de todas las restricciones de acceso de un directorio del sistema"
+fr = "suppression de toutes les restrictions d'accès sur un répertoire système"
+de = "Aufheben aller Zugriffsbeschränkungen für ein Systemverzeichnis"
+
+[safety.shutdown]
+en = "shutting down or rebooting the machine"
+ru = "выключение или перезагрузка машины"
+es = "apagado o reinicio de la máquina"
+fr = "arrêt ou redémarrage de la machine"
+de = "Herunterfahren oder Neustarten des Rechners"
+
+[safety.force_push]
+en = "force-overwriting history in a remote repository"
+ru = "принудительная перезапись истории в удалённом репозитории"
+es = "sobrescritura forzada del historial en un repositorio remoto"
+fr = "écrasement forcé de l'historique dans un dépôt distant"
+de = "erzwungenes Überschreiben der Historie in einem entfernten Repository"
+
+[safety.destructive_sql]
+en = "destroying data in a database"
+ru = "уничтожение данных в базе данных"
+es = "destrucción de datos en una base de datos"
+fr = "destruction de données dans une base de données"
+de = "Zerstörung von Daten in einer Datenbank"
+
+[safety.powershell_recursive_delete]
+en = "recursive deletion in PowerShell"
+ru = "рекурсивное удаление в PowerShell"
+es = "eliminación recursiva en PowerShell"
+fr = "suppression récursive dans PowerShell"
+de = "rekursives Löschen in PowerShell"
+
+[safety.powershell_format]
+en = "formatting a volume in PowerShell"
+ru = "форматирование тома в PowerShell"
+es = "formateo de un volumen en PowerShell"
+fr = "formatage d'un volume dans PowerShell"
+de = "Formatieren eines Volumes in PowerShell"
+
+[safety.cmd_recursive_delete]
+en = "recursive deletion in cmd.exe"
+ru = "рекурсивное удаление в cmd.exe"
+es = "eliminación recursiva en cmd.exe"
+fr = "suppression récursive dans cmd.exe"
+de = "rekursives Löschen in cmd.exe"
+
+[safety.disk_partitioning]
+en = "editing disk partitions"
+ru = "изменение разделов диска"
+es = "modificación de las particiones del disco"
+fr = "modification des partitions du disque"
+de = "Ändern der Festplattenpartitionen"
