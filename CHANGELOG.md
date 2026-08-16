@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- The query field of interactive mode is a real line editor. Until now it only
+  appended characters and erased the last one, so a typo at the start of a long
+  query meant retyping the rest. It now has a cursor: `←`/`→`, `Home`/`End`
+  (`Ctrl+A`/`Ctrl+E`), word movements on `Ctrl+←`/`Ctrl+→`, `Alt+←`/`Alt+→` and
+  `Alt+B`/`Alt+F`, `Delete`, `Ctrl+W`, `Ctrl+U` and `Ctrl+K`. Every movement
+  answers to several keys because terminals disagree about which ones they send.
+- Pasted text goes in as a single edit, with its line breaks turned into spaces,
+  so a multi-line paste no longer sends the query halfway through. Windows
+  consoles do not report a paste to the program and keep handing it over key by
+  key, so there it behaves as before.
+
+### Fixed
+
+- On layouts that need AltGr — `@`, `€`, `ą` — those characters never reached
+  the query in interactive mode on Windows: a console reports AltGr as
+  Ctrl+Alt, and every Ctrl combination was discarded as a shortcut.
+
 ## [0.1.3] - 2026-08-14
 
 ### Fixed

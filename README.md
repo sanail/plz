@@ -178,6 +178,28 @@ query, `Ctrl+N` starts a new one without leaving the mode.
 
 ### Keys
 
+Editing the query in interactive mode:
+
+| Key | Action |
+|---|---|
+| `←` / `→` | move the cursor by a character |
+| `Ctrl+←` / `Ctrl+→`, `Alt+←` / `Alt+→`, `Alt+B` / `Alt+F` | move it by a word |
+| `Home` / `End`, `Ctrl+A` / `Ctrl+E` | jump to the start or the end |
+| `Backspace` / `Delete` | delete on either side of the cursor |
+| `Ctrl+W`, `Alt+Backspace` | delete the word before the cursor |
+| `Ctrl+U` / `Ctrl+K` | delete to the start or to the end of the line |
+| `Enter` | send the query |
+
+Each movement answers to several keys because terminals differ in what they
+send: macOS Terminal has no `Ctrl+←`, a bare Windows console has no `Alt+B`.
+`Ctrl+A` and `Ctrl+E` work everywhere.
+
+Pasting into the query keeps its line breaks as spaces — the query is a single
+line — and does not send it early. Windows consoles hand a paste over key by
+key instead, so there a line break inside the pasted text sends the query.
+
+Choosing a suggestion:
+
 | Key | Action |
 |---|---|
 | `1`–`9` | pick a suggestion and run it immediately |
