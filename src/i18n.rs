@@ -87,6 +87,140 @@ pub fn current() -> Lang {
     Lang::from_tag(&rust_i18n::locale()).unwrap_or(Lang::En)
 }
 
+/// Checks over the catalogue files themselves.
+///
+/// `t!` resolves its keys at runtime, so nothing here is caught by the
+/// compiler: a language missing from an entry, a dropped placeholder or a
+/// translated config key all build cleanly and surface in front of a user.
+/// These read the same files the macro embeds, using the `toml` crate the
+/// project already depends on.
+#[cfg(test)]
+mod catalogues {
+    use std::collections::{BTreeMap, BTreeSet};
+
+    use super::Lang;
+
+    /// One message: its dotted key, and its text per language code.
+    type Entry = (String, BTreeMap<String, String>);
+
+    /// Read every catalogue from disk rather than from a list kept here, so a
+    /// newly added file cannot quietly escape these checks. `cargo test` runs
+    /// with the package root as the working directory.
+    fn entries() -> Vec<Entry> {
+        let mut all = Vec::new();
+        let dir = std::fs::read_dir("locales").expect("locales/ is missing");
+        for file in dir {
+            let path = file.unwrap().path();
+            if path.extension().and_then(|e| e.to_str()) != Some("toml") {
+                continue;
+            }
+            let raw = std::fs::read_to_string(&path).unwrap();
+            let parsed: toml::Value =
+                toml::from_str(&raw).unwrap_or_else(|err| panic!("{}: {err}", path.display()));
+            collect("", &parsed, &mut all);
+        }
+        assert!(!all.is_empty(), "no catalogue entries were found");
+        all
+    }
+
+    /// Walk the nested tables down to the ones holding the translations.
+    fn collect(prefix: &str, value: &toml::Value, out: &mut Vec<Entry>) {
+        let Some(table) = value.as_table() else {
+            return;
+        };
+        // A table whose values are strings is a message; `_version` is an
+        // integer, so it never looks like one.
+        let texts: BTreeMap<String, String> = table
+            .iter()
+            .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
+            .collect();
+        if !texts.is_empty() {
+            out.push((prefix.to_string(), texts));
+            return;
+        }
+        for (key, child) in table {
+            let path = if prefix.is_empty() {
+                key.clone()
+            } else {
+                format!("{prefix}.{key}")
+            };
+            collect(&path, child, out);
+        }
+    }
+
+    /// The `%{name}` slots a text expects.
+    fn placeholders(text: &str) -> BTreeSet<&str> {
+        let mut found = BTreeSet::new();
+        let mut rest = text;
+        while let Some(start) = rest.find("%{") {
+            let after = &rest[start + 2..];
+            let Some(end) = after.find('}') else { break };
+            found.insert(&after[..end]);
+            rest = &after[end + 1..];
+        }
+        found
+    }
+
+    #[test]
+    fn every_message_is_translated_into_every_language() {
+        for (key, texts) in entries() {
+            for lang in Lang::ALL {
+                let text = texts
+                    .get(lang.code())
+                    .unwrap_or_else(|| panic!("{key} has no {} translation", lang.code()));
+                assert!(!text.trim().is_empty(), "{key}: {} is empty", lang.code());
+            }
+            // A stray column would be dead weight the fallback never reaches.
+            assert_eq!(texts.len(), Lang::ALL.len(), "{key} has an extra language");
+        }
+    }
+
+    #[test]
+    fn every_translation_keeps_the_placeholders_of_the_english_text() {
+        // The classic translation bug: it parses, and the path or the error the
+        // slot should have carried simply vanishes from the message.
+        for (key, texts) in entries() {
+            let expected = placeholders(&texts["en"]);
+            for (code, text) in &texts {
+                assert_eq!(placeholders(text), expected, "{key} in {code}: {text}");
+            }
+        }
+    }
+
+    #[test]
+    fn identifiers_are_never_translated() {
+        // These are things the user has to type back verbatim; translating one
+        // turns a fix-it hint into an instruction that does not work.
+        const VERBATIM: &[&str] = &[
+            "base_url",
+            "json_mode",
+            "timeout_secs",
+            "send_cwd",
+            "PLZ_API_KEY",
+            "PLZ_CONFIG",
+            "PLZ_OUTPUT_FILE",
+            "plz config init",
+            "plz hook",
+            "cmd.exe",
+            "PowerShell",
+            "RemoteSigned",
+            "Set-ExecutionPolicy",
+            "OSC 52",
+            "stderr",
+        ];
+        for (key, texts) in entries() {
+            for token in VERBATIM.iter().filter(|t| texts["en"].contains(**t)) {
+                for (code, text) in &texts {
+                    assert!(
+                        text.contains(token),
+                        "{key} in {code} lost `{token}`: {text}"
+                    );
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rust_i18n::t;
