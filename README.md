@@ -271,11 +271,15 @@ timeout_secs      = 30
 send_cwd          = true   # send the working directory to the model
 json_mode         = true   # ask for response_format = json_object
 disable_thinking  = true   # ask the model not to reason before answering
+language          = "auto" # interface language; "auto" follows the system
 ```
 
 On Unix the file is created with mode `0600`. You need not keep the key in it at
 all: the resolution order is `PLZ_API_KEY`, then the preset's variable
 (`DEEPSEEK_API_KEY`, `OPENAI_API_KEY`, …), then the config field.
+
+`PLZ_LANG` overrides `language` for a single run, the same way `PLZ_API_KEY`
+overrides the key.
 
 If your endpoint answers 400 on `response_format`, set `json_mode = false`; the
 format is then requested through the prompt text alone.

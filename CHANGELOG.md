@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The interface follows the system language, with English, Russian, Spanish,
+  French and German supported out of the box. Anything else — an unsupported
+  language, a locale that cannot be read — falls back to English. Set
+  `language` under `[behavior]` to pin one, or `PLZ_LANG` for a single run.
+- The confirmation prompt accepts the local spelling of yes alongside `y`.
 - The query field of interactive mode is a real line editor. Until now it only
   appended characters and erased the last one, so a typo at the start of a long
   query meant retyping the rest. It now has a cursor: `←`/`→`, `Home`/`End`
@@ -19,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   so a multi-line paste no longer sends the query halfway through. Windows
   consoles do not report a paste to the program and keep handing it over key by
   key, so there it behaves as before.
+
+### Changed
+
+- Each explanation is now written in the interface language rather than in the
+  language of the request. Guessing from the request left the explanation in a
+  different language from everything around it whenever the task was typed in
+  English by a non-English speaker.
 
 ### Fixed
 
