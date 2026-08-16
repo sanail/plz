@@ -1,6 +1,6 @@
 [package]
 name = "plz"
-version = "0.1.3"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.85"
 description = "Describe a task in plain language, get a command ready for your OS and shell"
