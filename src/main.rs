@@ -201,8 +201,8 @@ fn execute(cli: &Cli, config: &Config, ctx: &Context, suggestion: &Suggestion) -
         if let Some(reason) = risk.reason() {
             eprintln!("Warning: {reason}.");
             eprintln!("  {command}");
-            if !input::confirm("Run it?")? {
-                eprintln!("Cancelled.");
+            if !input::confirm(&t!("ui.run_it"))? {
+                eprintln!("{}", t!("ui.cancelled"));
                 std::process::exit(130);
             }
         }
@@ -221,10 +221,7 @@ fn execute(cli: &Cli, config: &Config, ctx: &Context, suggestion: &Suggestion) -
             Some(arg) => format!("plz hook {arg} --install"),
             None => "plz hook <shell> --install".to_string(),
         };
-        eprintln!(
-            "Note: this command changes shell state but ran in a child process.\n\
-             Install the wrapper — `{hook}` — to make such commands affect your current shell."
-        );
+        eprintln!("{}", t!("ui.child_process_note", hook = hook));
     }
     // Pass the exit code outwards, or `plz "..." && next-step` would run the
     // next step even after a failure.

@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use anyhow::{Context as _, Result};
+use rust_i18n::t;
 
 use crate::context::{Shell, ShellKind};
 
@@ -66,10 +67,10 @@ pub fn supports_buffer(shell: ShellKind) -> bool {
 /// A file rather than stdout, because the selection UI writes escape sequences
 /// to the terminal; had they reached `eval`, the shell would run garbage.
 pub fn hand_off(verb: Verb, command: &str) -> Result<()> {
-    let path =
-        output_file().context("the shell wrapper is not active: PLZ_OUTPUT_FILE is unset")?;
+    let path = output_file().with_context(|| t!("errors.wrapper_inactive").to_string())?;
     let payload = format!("{}\n{}", verb.as_str(), command.trim());
-    fs::write(&path, payload).with_context(|| format!("could not write {}", path.display()))?;
+    fs::write(&path, payload)
+        .with_context(|| t!("errors.could_not_write", path = path.display()).to_string())?;
     Ok(())
 }
 
@@ -122,9 +123,13 @@ pub fn run_in_child_shell(shell: &Shell, command: &str) -> Result<i32> {
     }
     cmd.args(args).arg(command);
 
-    let status = cmd
-        .status()
-        .with_context(|| format!("could not launch `{}`", program.to_string_lossy()))?;
+    let status = cmd.status().with_context(|| {
+        t!(
+            "errors.could_not_launch",
+            program = program.to_string_lossy()
+        )
+        .to_string()
+    })?;
 
     // A signal (Ctrl+C inside the command) yields no exit code; report the
     // conventional 130, which is what shells themselves do.

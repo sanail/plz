@@ -16,6 +16,7 @@
 use std::io::{IsTerminal, Write};
 
 use anyhow::{anyhow, Result};
+use rust_i18n::t;
 
 /// How the text reached the clipboard. Shown to the user, because it decides
 /// where the command will actually be available.
@@ -26,10 +27,10 @@ pub enum Method {
 }
 
 impl Method {
-    pub fn describe(&self) -> &'static str {
+    pub fn describe(&self) -> String {
         match self {
-            Method::System => "copied to the clipboard",
-            Method::Osc52 => "copied via the terminal (OSC 52)",
+            Method::System => t!("ui.copied_to_clipboard").to_string(),
+            Method::Osc52 => t!("ui.copied_via_terminal").to_string(),
         }
     }
 }
@@ -51,9 +52,11 @@ pub fn copy(text: &str) -> Result<Method> {
         }
     }
 
+    // The mechanism labels inside `details` stay English: they name a system
+    // clipboard API and an escape sequence, not something to read as prose.
     Err(anyhow!(
-        "could not copy the command ({}). Select it with the mouse instead.",
-        errors.join("; ")
+        "{}",
+        t!("errors.clipboard_failed", details = errors.join("; "))
     ))
 }
 
@@ -79,7 +82,7 @@ fn copy_via_system(text: &str) -> Result<()> {
 fn copy_via_osc52(text: &str) -> Result<()> {
     let mut out = std::io::stderr();
     if !out.is_terminal() {
-        return Err(anyhow!("stderr is not a terminal"));
+        return Err(anyhow!("{}", t!("errors.stderr_not_a_terminal")));
     }
     // `c` is the main system clipboard (CLIPBOARD), not the selection.
     write!(out, "\x1b]52;c;{}\x07", base64(text.as_bytes()))?;
@@ -160,5 +163,15 @@ mod tests {
     #[test]
     fn methods_describe_themselves_differently() {
         assert_ne!(Method::System.describe(), Method::Osc52.describe());
+    }
+
+    #[test]
+    fn a_description_is_prose_rather_than_a_catalogue_key() {
+        // A key that is missing or misspelled comes back from `t!` as the key
+        // itself, which reads as gibberish but breaks nothing else.
+        for method in [Method::System, Method::Osc52] {
+            let text = method.describe();
+            assert!(!text.starts_with("ui."), "{method:?}: {text}");
+        }
     }
 }

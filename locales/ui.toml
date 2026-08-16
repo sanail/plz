@@ -1,0 +1,39 @@
+# Prompts and notes printed around a chosen command.
+#
+# See locales/errors.toml for the rules every catalogue follows.
+_version = 2
+
+[ui.copied_to_clipboard]
+en = "copied to the clipboard"
+ru = "скопировано в буфер обмена"
+es = "copiado al portapapeles"
+fr = "copié dans le presse-papiers"
+de = "in die Zwischenablage kopiert"
+
+[ui.copied_via_terminal]
+en = "copied via the terminal (OSC 52)"
+ru = "скопировано через терминал (OSC 52)"
+es = "copiado mediante el terminal (OSC 52)"
+fr = "copié via le terminal (OSC 52)"
+de = "über das Terminal kopiert (OSC 52)"
+
+[ui.run_it]
+en = "Run it?"
+ru = "Выполнить?"
+es = "¿Ejecutarlo?"
+fr = "L'exécuter ?"
+de = "Ausführen?"
+
+[ui.cancelled]
+en = "Cancelled."
+ru = "Отменено."
+es = "Cancelado."
+fr = "Annulé."
+de = "Abgebrochen."
+
+[ui.child_process_note]
+en = "Note: this command changes shell state but ran in a child process.\nInstall the wrapper — `%{hook}` — to make such commands affect your current shell."
+ru = "Замечание: команда меняет состояние шелла, но выполнена в дочернем процессе.\nУстановите обёртку — `%{hook}` — чтобы такие команды влияли на текущий шелл."
+es = "Nota: este comando cambia el estado del shell, pero se ejecutó en un proceso hijo.\nInstale el envoltorio — `%{hook}` — para que tales comandos afecten a su shell actual."
+fr = "Remarque : cette commande modifie l'état du shell, mais elle s'est exécutée dans un processus enfant.\nInstallez l'enveloppe — `%{hook}` — pour que de telles commandes affectent votre shell actuel."
+de = "Hinweis: Dieser Befehl ändert den Shell-Zustand, lief aber in einem Kindprozess.\nInstallieren Sie den Wrapper — `%{hook}` —, damit solche Befehle Ihre aktuelle Shell betreffen."

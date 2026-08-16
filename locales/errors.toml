@@ -12,3 +12,38 @@ ru = "модель не вернула ни одного варианта"
 es = "el modelo no devolvió ninguna sugerencia"
 fr = "le modèle n'a renvoyé aucune suggestion"
 de = "das Modell hat keine Vorschläge zurückgegeben"
+
+[errors.wrapper_inactive]
+en = "the shell wrapper is not active: PLZ_OUTPUT_FILE is unset"
+ru = "обёртка для шелла не активна: переменная PLZ_OUTPUT_FILE не задана"
+es = "el envoltorio del shell no está activo: PLZ_OUTPUT_FILE no está definida"
+fr = "l'enveloppe du shell n'est pas active : PLZ_OUTPUT_FILE n'est pas définie"
+de = "der Shell-Wrapper ist nicht aktiv: PLZ_OUTPUT_FILE ist nicht gesetzt"
+
+[errors.could_not_write]
+en = "could not write %{path}"
+ru = "не удалось записать %{path}"
+es = "no se pudo escribir %{path}"
+fr = "impossible d'écrire %{path}"
+de = "%{path} konnte nicht geschrieben werden"
+
+[errors.could_not_launch]
+en = "could not launch `%{program}`"
+ru = "не удалось запустить `%{program}`"
+es = "no se pudo iniciar `%{program}`"
+fr = "impossible de lancer `%{program}`"
+de = "`%{program}` konnte nicht gestartet werden"
+
+[errors.clipboard_failed]
+en = "could not copy the command (%{details}). Select it with the mouse instead."
+ru = "не удалось скопировать команду (%{details}). Выделите её мышью."
+es = "no se pudo copiar el comando (%{details}). Selecciónelo con el ratón."
+fr = "impossible de copier la commande (%{details}). Sélectionnez-la à la souris."
+de = "der Befehl konnte nicht kopiert werden (%{details}). Markieren Sie ihn mit der Maus."
+
+[errors.stderr_not_a_terminal]
+en = "stderr is not a terminal"
+ru = "stderr не является терминалом"
+es = "stderr no es un terminal"
+fr = "stderr n'est pas un terminal"
+de = "stderr ist kein Terminal"
