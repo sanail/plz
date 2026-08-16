@@ -1,0 +1,35 @@
+# Console prompts.
+#
+# See locales/errors.toml for the rules every catalogue follows.
+_version = 2
+
+# The capital letter is the default, and the default is always "no": this hint
+# guards risky commands. Whatever letter stands for yes here must be one
+# `is_affirmative` accepts — a test checks that the two agree.
+[input.confirm_hint]
+en = "y/N"
+ru = "д/Н"
+es = "s/N"
+fr = "o/N"
+de = "j/N"
+
+[input.enter_a_number]
+en = "Enter a number between 1 and %{max}."
+ru = "Введите число от 1 до %{max}."
+es = "Introduzca un número entre 1 y %{max}."
+fr = "Saisissez un nombre entre 1 et %{max}."
+de = "Geben Sie eine Zahl zwischen 1 und %{max} ein."
+
+[errors.input_aborted]
+en = "input aborted"
+ru = "ввод прерван"
+es = "entrada interrumpida"
+fr = "saisie interrompue"
+de = "Eingabe unterbrochen"
+
+[errors.input_cancelled]
+en = "input cancelled"
+ru = "ввод отменён"
+es = "entrada cancelada"
+fr = "saisie annulée"
+de = "Eingabe abgebrochen"

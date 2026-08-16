@@ -14,6 +14,10 @@ pub enum Lang {
 }
 
 impl Lang {
+    /// Every language, for tests that have to cover all of them.
+    #[cfg(test)]
+    pub const ALL: [Lang; 5] = [Lang::En, Lang::Ru, Lang::Es, Lang::Fr, Lang::De];
+
     /// The locale code, which is also the key of the column in the catalogues.
     pub fn code(self) -> &'static str {
         match self {
@@ -74,6 +78,13 @@ pub fn init(configured: Option<&str>) {
     let detected = sys_locale::get_locale();
     let lang = resolve(forced.as_deref(), configured, detected.as_deref());
     rust_i18n::set_locale(lang.code());
+}
+
+/// The language currently in force, for the few decisions that are not just a
+/// lookup — which spelling of "yes" to accept, which language to ask the model
+/// to answer in.
+pub fn current() -> Lang {
+    Lang::from_tag(&rust_i18n::locale()).unwrap_or(Lang::En)
 }
 
 #[cfg(test)]
