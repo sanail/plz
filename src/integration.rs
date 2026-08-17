@@ -38,13 +38,19 @@ pub fn startup_line(shell: Shell) -> Option<&'static str> {
 /// The four real scripts are shipped as files and stay in English; only the
 /// cmd.exe placeholder is prose, and it is translated.
 pub fn script(shell: Shell) -> String {
-    match shell {
-        Shell::Zsh => ZSH.to_string(),
-        Shell::Bash => BASH.to_string(),
-        Shell::Fish => FISH.to_string(),
-        Shell::Powershell => POWERSHELL.to_string(),
-        Shell::Cmd => t!("install.cmd_explanation").to_string(),
-    }
+    let script = match shell {
+        Shell::Zsh => ZSH,
+        Shell::Bash => BASH,
+        Shell::Fish => FISH,
+        Shell::Powershell => POWERSHELL,
+        Shell::Cmd => return t!("install.cmd_explanation").to_string(),
+    };
+    // The scripts are embedded at build time, so a checkout with
+    // `core.autocrlf=true` — the default of Git for Windows — would bake CRLF
+    // into them, and `eval "$(plz hook bash)"` dies on the first line of the
+    // function. `.gitattributes` keeps that out of the repository; this keeps it
+    // out of a build made from source that arrived some other way.
+    script.replace("\r\n", "\n")
 }
 
 /// How to add the startup line by hand. Printed to stderr so it stays out of
@@ -121,6 +127,37 @@ mod tests {
             let text = script(*shell);
             assert!(text.contains("PLZ_OUTPUT_FILE"), "{shell:?}");
             assert!(text.contains("PLZ_SHELL_INTEGRATION"), "{shell:?}");
+        }
+    }
+
+    #[test]
+    fn scripts_are_free_of_carriage_returns() {
+        // `$(...)` strips trailing newlines and nothing else, so a single \r
+        // inside the script reaches bash as part of a token:
+        // `syntax error near unexpected token $'{\r''`. The constants are
+        // checked as well as the output, because a CRLF there means the
+        // checkout ignored .gitattributes — the source of the bug, which the
+        // normalisation in `script` would otherwise hide.
+        for (name, embedded) in [
+            ("plz.zsh", ZSH),
+            ("plz.bash", BASH),
+            ("plz.fish", FISH),
+            ("plz.ps1", POWERSHELL),
+        ] {
+            assert!(!embedded.contains('\r'), "{name} was embedded with CRLF");
+        }
+        for shell in REAL_SHELLS {
+            assert!(!script(*shell).contains('\r'), "{shell:?}");
+        }
+    }
+
+    #[test]
+    fn posix_scripts_translate_the_protocol_path_for_a_native_binary() {
+        // Cygwin hands POSIX paths to a native plz.exe untranslated, so the
+        // wrapper has to name the file in Windows form; `cygpath` is absent
+        // everywhere this does not apply.
+        for shell in [Shell::Zsh, Shell::Bash, Shell::Fish] {
+            assert!(script(shell).contains("cygpath -w"), "{shell:?}");
         }
     }
 

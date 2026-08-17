@@ -1,0 +1,8 @@
+# The wrapper scripts are compiled into the binary with `include_str!` and then
+# evaluated by the shell as they are. A CRLF checkout — the default of Git for
+# Windows, and of the `windows-latest` runner that builds the released binary —
+# bakes a `\r` into every line, and bash stops at the first one:
+# `syntax error near unexpected token $'{\r''`. PowerShell does not care, but
+# the rule covers its script too, so what ends up inside the binary does not
+# depend on the machine it was built on.
+src/shells/* text eol=lf
