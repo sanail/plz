@@ -20,6 +20,7 @@ use crate::cli::Shell;
 use crate::context::{self, ShellKind};
 use crate::input;
 use crate::integration;
+use crate::winpath;
 
 /// The policy plz offers to set: local scripts run, downloaded ones still need
 /// a signature. It is per-user and needs no administrator rights.
@@ -129,15 +130,15 @@ fn startup_file(shell: Shell) -> Result<PathBuf> {
         Shell::Zsh => {
             // ZDOTDIR moves the whole zsh configuration; honouring it is the
             // difference between installing and writing to a file zsh never reads.
-            match std::env::var_os("ZDOTDIR") {
-                Some(dir) => Ok(PathBuf::from(dir).join(".zshrc")),
+            match env_dir("ZDOTDIR") {
+                Some(dir) => Ok(dir.join(".zshrc")),
                 None => Ok(home()?.join(".zshrc")),
             }
         }
         Shell::Bash => Ok(home()?.join(".bashrc")),
         Shell::Fish => {
-            let config = match std::env::var_os("XDG_CONFIG_HOME") {
-                Some(dir) => PathBuf::from(dir),
+            let config = match env_dir("XDG_CONFIG_HOME") {
+                Some(dir) => dir,
                 None => home()?.join(".config"),
             };
             // conf.d is sourced automatically, so plz gets a file of its own
@@ -149,10 +150,33 @@ fn startup_file(shell: Shell) -> Result<PathBuf> {
     }
 }
 
+/// The home directory of the shell we are installing into.
+///
+/// `HOME` comes first, and on Windows that is not a matter of taste: the
+/// `directories` crate asks the OS there (`FOLDERID_Profile`, i.e.
+/// `C:\Users\name`) and ignores `HOME` by design, while a Cygwin bash reads
+/// `/home/name/.bashrc`. Writing to the file the shell never opens looks like a
+/// successful install and does nothing at all.
 fn home() -> Result<PathBuf> {
+    if let Some(home) = env_dir("HOME") {
+        return Ok(home);
+    }
     directories::BaseDirs::new()
         .map(|dirs| dirs.home_dir().to_path_buf())
         .ok_or_else(|| anyhow!("{}", t!("install.no_home_directory")))
+}
+
+/// A directory named by an environment variable, in a form we can write to.
+///
+/// Under Cygwin these hold POSIX paths that reach a native process untranslated,
+/// so `/home/name` would be resolved against the current drive as `C:\home\name`;
+/// `winpath::to_native` asks `cygpath` for the directory the shell actually meant.
+fn env_dir(var: &str) -> Option<PathBuf> {
+    let value = std::env::var_os(var).filter(|value| !value.is_empty())?;
+    match winpath::to_native(&value.to_string_lossy()) {
+        Some(native) => Some(native),
+        None => Some(PathBuf::from(value)),
+    }
 }
 
 /// Which PowerShell to talk to.
@@ -325,6 +349,7 @@ fn policy_blocks_profile(policy: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testutil::env_guard;
 
     #[test]
     fn policies_that_stop_the_profile_loading() {
@@ -455,6 +480,43 @@ mod tests {
             let path = startup_file(shell).unwrap_or_else(|e| panic!("{shell:?}: {e}"));
             assert!(path.is_absolute(), "{shell:?}: {}", path.display());
         }
+    }
+
+    #[test]
+    fn home_decides_where_the_startup_file_goes() {
+        // On Windows `directories` answers with the profile the OS knows about
+        // (`C:\Users\name`) and ignores HOME, but a Cygwin bash reads
+        // `$HOME/.bashrc` and nothing else. HOME is the shell's own answer, so
+        // it wins everywhere.
+        let _guard = env_guard();
+        let dir = tempfile::tempdir().unwrap();
+        std::env::set_var("HOME", dir.path());
+        std::env::remove_var("ZDOTDIR");
+
+        assert_eq!(
+            startup_file(Shell::Bash).unwrap(),
+            dir.path().join(".bashrc")
+        );
+        assert_eq!(startup_file(Shell::Zsh).unwrap(), dir.path().join(".zshrc"));
+
+        std::env::remove_var("HOME");
+    }
+
+    #[test]
+    fn zdotdir_still_wins_for_zsh() {
+        let _guard = env_guard();
+        let home = tempfile::tempdir().unwrap();
+        let zdotdir = tempfile::tempdir().unwrap();
+        std::env::set_var("HOME", home.path());
+        std::env::set_var("ZDOTDIR", zdotdir.path());
+
+        assert_eq!(
+            startup_file(Shell::Zsh).unwrap(),
+            zdotdir.path().join(".zshrc")
+        );
+
+        std::env::remove_var("ZDOTDIR");
+        std::env::remove_var("HOME");
     }
 
     #[test]
