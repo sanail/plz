@@ -287,10 +287,37 @@ fn with_windows_environment(mut shell: Shell) -> Shell {
             return shell;
         }
     }
-    if std::env::var_os("CYGWIN").is_some() {
+    if std::env::var_os("CYGWIN").is_some() || looks_like_cygwin(&shell) {
         shell.environment = Some("Cygwin".into());
     }
     shell
+}
+
+/// Whether a POSIX shell on Windows is Cygwin's, judged by what it left in the
+/// environment.
+///
+/// `CYGWIN` is a tuning variable rather than a marker — a stock installation
+/// never sets it, and then the model is told it is talking to an ordinary
+/// Windows box and answers with `C:\` paths. What Cygwin does leave behind is
+/// the environment it did not translate: MSYS2 rewrites `HOME` and `SHELL` into
+/// Windows form on the way to a native process, Cygwin passes them through as
+/// `/home/name` and `/bin/bash`. The shell kind has to agree as well, or a
+/// PowerShell session that happens to have a `HOME` from some other tool would
+/// be labelled Cygwin.
+fn looks_like_cygwin(shell: &Shell) -> bool {
+    if !cfg!(windows) {
+        return false;
+    }
+    if !matches!(
+        shell.kind,
+        ShellKind::Bash | ShellKind::Zsh | ShellKind::Fish | ShellKind::Posix
+    ) {
+        return false;
+    }
+    ["HOME", "SHELL"]
+        .iter()
+        .filter_map(|var| std::env::var(var).ok())
+        .any(|value| value.starts_with('/'))
 }
 
 #[cfg(test)]
@@ -372,6 +399,40 @@ mod tests {
         let mut shell = Shell::new(ShellKind::Bash, "bash");
         shell.environment = Some("Cygwin".into());
         assert_eq!(shell.to_string(), "bash (Cygwin)");
+    }
+
+    #[test]
+    fn a_posix_home_marks_a_windows_bash_as_cygwin() {
+        // A stock Cygwin sets no CYGWIN variable; what it does leave is an
+        // untranslated POSIX environment, which MSYS2 would have rewritten.
+        // Off Windows the same environment is simply Linux or macOS.
+        let _guard = crate::testutil::env_guard();
+        std::env::set_var("HOME", "/home/name");
+        std::env::set_var("SHELL", "/bin/bash");
+
+        let bash = looks_like_cygwin(&Shell::new(ShellKind::Bash, "bash"));
+        assert_eq!(bash, cfg!(windows));
+        // A native Windows shell that happens to have a POSIX-looking HOME is
+        // not Cygwin.
+        assert!(!looks_like_cygwin(&Shell::new(
+            ShellKind::PowerShell,
+            "powershell"
+        )));
+
+        std::env::remove_var("HOME");
+        std::env::remove_var("SHELL");
+    }
+
+    #[test]
+    fn a_windows_home_is_not_cygwin() {
+        let _guard = crate::testutil::env_guard();
+        std::env::set_var("HOME", r"C:\Users\name");
+        std::env::set_var("SHELL", r"C:\Program Files\Git\usr\bin\bash.exe");
+
+        assert!(!looks_like_cygwin(&Shell::new(ShellKind::Bash, "bash")));
+
+        std::env::remove_var("HOME");
+        std::env::remove_var("SHELL");
     }
 
     #[test]
