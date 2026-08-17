@@ -7,10 +7,19 @@
 # take precedence over commands found in PATH. The binary itself is called via
 # `command plz`, so there is no recursion.
 plz() {
-  local outfile
+  local outfile winfile
   outfile="$(mktemp -t plz.XXXXXX)" || return 1
 
-  PLZ_OUTPUT_FILE="$outfile" PLZ_SHELL_INTEGRATION=zsh command plz "$@"
+  # On Windows plz is a native binary, and Cygwin — unlike MSYS2 and Git Bash —
+  # passes POSIX paths to such a child untranslated: it would write the answer
+  # to C:\tmp\plz.XXXXXX while this function waited for it in /tmp. The POSIX
+  # name stays for the shell's own reads and for rm.
+  winfile="$outfile"
+  if command -v cygpath >/dev/null 2>&1; then
+    winfile="$(cygpath -w "$outfile")"
+  fi
+
+  PLZ_OUTPUT_FILE="$winfile" PLZ_SHELL_INTEGRATION=zsh command plz "$@"
   local exit_code=$?
 
   # An empty file means the user cancelled, so there is nothing to do.

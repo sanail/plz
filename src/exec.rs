@@ -34,14 +34,40 @@ impl Verb {
     }
 }
 
-/// Path to the protocol file when the wrapper is active.
-pub fn output_file() -> Option<PathBuf> {
+/// The name the wrapper gave us for the protocol file, reachable or not.
+pub fn requested_output_file() -> Option<String> {
     std::env::var_os("PLZ_OUTPUT_FILE")
-        .map(PathBuf::from)
-        .filter(|p| !p.as_os_str().is_empty())
+        .map(|value| value.to_string_lossy().into_owned())
+        .filter(|value| !value.is_empty())
 }
 
-/// Whether the shell wrapper is installed.
+/// Whether the wrapper asked for the protocol at all.
+///
+/// The counterpart of [`integration_active`]: the wrapper is there, but its file
+/// may still be out of reach — see [`output_file`].
+pub fn integration_requested() -> bool {
+    requested_output_file().is_some()
+}
+
+/// Path to the protocol file, when it is one this process can open.
+///
+/// Every wrapper creates the file before running plz — `mktemp` in the POSIX
+/// shells, `GetTempFileName` in PowerShell — so its existence is part of the
+/// protocol, and its absence means the name did not survive the trip. That is
+/// what happens under Cygwin, which hands `/tmp/plz.abc123` to a native process
+/// untranslated: Windows reads it as `C:\tmp\plz.abc123`, a path that may well
+/// be writable, so plz would report success while the shell waited for a file
+/// nobody wrote. `cygpath` is asked for the real location before giving up.
+pub fn output_file() -> Option<PathBuf> {
+    let requested = requested_output_file()?;
+    let path = PathBuf::from(&requested);
+    if path.is_file() {
+        return Some(path);
+    }
+    crate::winpath::to_native(&requested).filter(|path| path.is_file())
+}
+
+/// Whether the shell wrapper is installed and its protocol file can be reached.
 pub fn integration_active() -> bool {
     output_file().is_some()
 }
@@ -196,13 +222,44 @@ mod tests {
         let _guard = env_guard();
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("out");
+        // The wrapper creates the file before it runs plz; so does this test,
+        // because that is what makes the protocol reachable.
+        fs::write(&path, "").unwrap();
         std::env::set_var("PLZ_OUTPUT_FILE", &path);
 
+        assert!(integration_active());
         hand_off(Verb::Run, "  echo hi  ").unwrap();
         let written = fs::read_to_string(&path).unwrap();
         let (verb, command) = parse_protocol(&written).unwrap();
         assert_eq!(verb, Verb::Run);
         assert_eq!(command, "echo hi");
+
+        std::env::remove_var("PLZ_OUTPUT_FILE");
+    }
+
+    #[test]
+    fn a_file_we_cannot_open_is_not_an_active_integration() {
+        // What Cygwin does to a POSIX path on its way to a native binary: the
+        // variable is set, the file it names is nowhere to be found, and running
+        // the command in a child shell is better than writing it into the void.
+        let _guard = env_guard();
+        let dir = tempfile::tempdir().unwrap();
+        std::env::set_var("PLZ_OUTPUT_FILE", dir.path().join("never-created"));
+
+        assert!(integration_requested());
+        assert!(!integration_active());
+        assert!(output_file().is_none());
+
+        std::env::remove_var("PLZ_OUTPUT_FILE");
+    }
+
+    #[test]
+    fn a_directory_is_not_a_protocol_file() {
+        let _guard = env_guard();
+        let dir = tempfile::tempdir().unwrap();
+        std::env::set_var("PLZ_OUTPUT_FILE", dir.path());
+
+        assert!(!integration_active());
 
         std::env::remove_var("PLZ_OUTPUT_FILE");
     }

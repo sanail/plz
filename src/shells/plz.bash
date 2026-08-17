@@ -10,10 +10,19 @@
 # the prompt buffer. So plz does not offer prompt insertion in bash — the Tab
 # key copies the command to the clipboard there instead.
 plz() {
-  local outfile
+  local outfile winfile
   outfile="$(mktemp -t plz.XXXXXX)" || return 1
 
-  PLZ_OUTPUT_FILE="$outfile" PLZ_SHELL_INTEGRATION=bash command plz "$@"
+  # On Windows plz is a native binary, and Cygwin — unlike MSYS2 and Git Bash —
+  # passes POSIX paths to such a child untranslated: it would write the answer
+  # to C:\tmp\plz.XXXXXX while this function waited for it in /tmp. The POSIX
+  # name stays for the shell's own reads and for rm.
+  winfile="$outfile"
+  if command -v cygpath >/dev/null 2>&1; then
+    winfile="$(cygpath -w "$outfile")"
+  fi
+
+  PLZ_OUTPUT_FILE="$winfile" PLZ_SHELL_INTEGRATION=bash command plz "$@"
   local exit_code=$?
 
   if [[ -s "$outfile" ]]; then

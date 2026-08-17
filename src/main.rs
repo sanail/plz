@@ -14,6 +14,7 @@ mod suggestion;
 #[cfg(test)]
 mod testutil;
 mod ui;
+mod winpath;
 
 use std::io::IsTerminal;
 
@@ -214,8 +215,16 @@ fn execute(cli: &Cli, config: &Config, ctx: &Context, suggestion: &Suggestion) -
         return exec::hand_off(exec::Verb::Run, command);
     }
 
+    // The wrapper is installed, but the file it named cannot be opened from here
+    // — under Cygwin that is a POSIX path a native binary never sees. Handing
+    // the command over would write it where nobody reads it, so we run it in a
+    // child instead and say why the session did not change.
+    if let Some(path) = exec::requested_output_file() {
+        eprintln!("{}", t!("ui.wrapper_file_unreachable", path = path));
+    }
+
     let code = exec::run_in_child_shell(&ctx.shell, command)?;
-    if changes_shell_state(command) {
+    if !exec::integration_requested() && changes_shell_state(command) {
         // Name the shell only when a wrapper exists for it; otherwise the
         // generic form, so the suggestion is always a line that works.
         let hook = match integration::hook_arg(ctx.shell.kind) {
@@ -315,7 +324,9 @@ fn print_environment(config: &Config) {
         None => t!("wizard.directory_not_sent").to_string(),
     };
     println!("# {} {directory}", t!("wizard.field_directory"));
-    let wrapper = if std::env::var_os("PLZ_OUTPUT_FILE").is_some() {
+    // Reported by what the protocol can actually do, not by the presence of a
+    // variable: a wrapper whose file we cannot open is not an active one.
+    let wrapper = if exec::integration_active() {
         t!("wizard.wrapper_active")
     } else {
         t!("wizard.wrapper_not_installed")

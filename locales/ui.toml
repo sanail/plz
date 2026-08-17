@@ -46,3 +46,10 @@ ru = "Замечание: команда меняет состояние шел�
 es = "Nota: este comando cambia el estado del shell, pero se ejecutó en un proceso hijo.\nInstale el envoltorio — `%{hook}` — para que tales comandos afecten a su shell actual."
 fr = "Remarque : cette commande modifie l'état du shell, mais elle s'est exécutée dans un processus enfant.\nInstallez l'enveloppe — `%{hook}` — pour que de telles commandes affectent votre shell actuel."
 de = "Hinweis: Dieser Befehl ändert den Shell-Zustand, lief aber in einem Kindprozess.\nInstallieren Sie den Wrapper — `%{hook}` —, damit solche Befehle Ihre aktuelle Shell betreffen."
+
+[ui.wrapper_file_unreachable]
+en = "Note: the wrapper set PLZ_OUTPUT_FILE to %{path}, which this process cannot open.\nThe command ran in a child process, so it did not change the current shell. Under Cygwin, open a new shell to regenerate the wrapper."
+ru = "Замечание: обёртка задала PLZ_OUTPUT_FILE как %{path}, но этот процесс не может открыть такой файл.\nКоманда выполнена в дочернем процессе и текущий шелл не изменила. В Cygwin откройте новый шелл, чтобы обёртка обновилась."
+es = "Nota: el envoltorio definió PLZ_OUTPUT_FILE como %{path}, que este proceso no puede abrir.\nEl comando se ejecutó en un proceso hijo, así que no cambió el shell actual. En Cygwin, abra un nuevo shell para regenerar el envoltorio."
+fr = "Remarque : l'enveloppe a défini PLZ_OUTPUT_FILE sur %{path}, que ce processus ne peut pas ouvrir.\nLa commande s'est exécutée dans un processus enfant et n'a donc pas modifié le shell actuel. Sous Cygwin, ouvrez un nouveau shell pour régénérer l'enveloppe."
+de = "Hinweis: Der Wrapper hat PLZ_OUTPUT_FILE auf %{path} gesetzt, was dieser Prozess nicht öffnen kann.\nDer Befehl lief in einem Kindprozess und hat die aktuelle Shell daher nicht verändert. Öffnen Sie unter Cygwin eine neue Shell, damit der Wrapper neu erzeugt wird."

@@ -9,7 +9,16 @@ function plz --description 'Describe a task in plain language, get a ready comma
     set -l outfile (mktemp -t plz.XXXXXX)
     or return 1
 
-    PLZ_OUTPUT_FILE=$outfile PLZ_SHELL_INTEGRATION=fish command plz $argv
+    # On Windows plz is a native binary, and Cygwin — unlike MSYS2 and Git Bash —
+    # passes POSIX paths to such a child untranslated: it would write the answer
+    # to C:\tmp\plz.XXXXXX while this function waited for it in /tmp. The POSIX
+    # name stays for the shell's own reads and for rm.
+    set -l winfile $outfile
+    if type -q cygpath
+        set winfile (cygpath -w $outfile)
+    end
+
+    PLZ_OUTPUT_FILE=$winfile PLZ_SHELL_INTEGRATION=fish command plz $argv
     # $status must be read immediately after the command: anything else overwrites it.
     set -l exit_code $status
 
