@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Under Cygwin the wrapper ran the chosen command and nothing happened: `cd ..`
+  left the shell where it was. The wrapper names a temporary file in
+  `PLZ_OUTPUT_FILE`, and Cygwin — unlike MSYS2 and Git Bash — hands POSIX paths
+  to a native binary untranslated, so plz wrote its answer to `C:\tmp\...` while
+  the shell waited for it in `/tmp`. The wrappers now pass the path through
+  `cygpath`, and plz treats a protocol file it cannot open as no wrapper at all:
+  the command runs in a child process and says why the session did not change,
+  instead of disappearing.
+- `eval "$(plz hook bash)"` failed with `syntax error near unexpected token
+  $'{\r''`. The wrapper scripts are compiled into the binary, and the Windows
+  build checked them out with CRLF line endings, which bash reads as part of the
+  code.
+- `plz hook bash --install` under Cygwin wrote to `C:\Users\name\.bashrc`, a
+  file that shell never reads. Windows answers the "where is home" question with
+  the profile directory and ignores `HOME`; the installer now follows `HOME` —
+  translating it when it is a POSIX path — as do `ZDOTDIR` and
+  `XDG_CONFIG_HOME`.
+- A Cygwin session with no `CYGWIN` variable set — the default — was described
+  to the model as plain Windows, which answered with `C:\` paths.
+
 ## [0.2.0] - 2026-08-16
 
 ### Added
