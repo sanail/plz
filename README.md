@@ -261,7 +261,7 @@ wrong shell.
 [provider]
 preset   = "deepseek"
 base_url = "https://api.deepseek.com/v1"
-model    = "deepseek-v4-flash"
+model    = "deepseek-flash"
 api_key  = "sk-..."
 
 [behavior]

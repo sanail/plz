@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The DeepSeek preset asks for `deepseek-flash`. On 10 September 2026 DeepSeek
+  renamed the model behind its Flash line, and `deepseek-v4-flash` — the name
+  the preset used — is only routed to the new one for the time being. The new
+  name carries no version, so it keeps pointing at the current Flash release.
+- The OpenRouter preset asks for `deepseek/deepseek-v4.1-flash`. It used
+  OpenRouter's `~deepseek/deepseek-v4-flash-latest` alias, which follows the
+  newest model of the V4 Flash family and therefore stopped at the generation
+  before this one.
+
+An existing configuration is left alone: the model name lives in your
+`config.toml` and nothing rewrites it. Run `plz config init` again, or edit the
+`model` field by hand, to move to the new one.
+
 ## [0.2.1] - 2026-08-17
 
 ### Fixed

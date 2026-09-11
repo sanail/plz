@@ -31,7 +31,8 @@ pub const DEEPSEEK: Preset = Preset {
     name: "deepseek",
     title: "DeepSeek",
     base_url: "https://api.deepseek.com/v1",
-    model: "deepseek-v4-flash",
+    // Unversioned on purpose: DeepSeek keeps this name on the newest Flash.
+    model: "deepseek-flash",
     key_env: Some("DEEPSEEK_API_KEY"),
     json_mode: true,
     // The model thinks by default, and a one-shot CLI gains nothing from it.
@@ -54,13 +55,9 @@ pub const OPENROUTER: Preset = Preset {
     name: "openrouter",
     title: "OpenRouter",
     base_url: "https://openrouter.ai/api/v1",
-    // The `~` prefix is OpenRouter's router alias: it resolves to the newest
-    // model of the family, so this preset does not go stale — and eventually
-    // 404 — each time a dated Flash release replaces the previous one. The bare
-    // `deepseek/deepseek-v4-flash` is a browsable page, not an id the API
-    // accepts: the catalogue at /api/v1/models carries only the dated slugs and
-    // this alias.
-    model: "~deepseek/deepseek-v4-flash-latest",
+    // OpenRouter's `~…-latest` aliases follow one model family rather than the
+    // provider's newest model, so the version here is pinned by hand.
+    model: "deepseek/deepseek-v4.1-flash",
     key_env: Some("OPENROUTER_API_KEY"),
     json_mode: true,
     // A proxy in front of many providers: an unknown field in the body is
