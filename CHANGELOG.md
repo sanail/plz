@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.2] - 2026-09-11
 
 ### Changed
 
@@ -18,9 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   newest model of the V4 Flash family and therefore stopped at the generation
   before this one.
 
-An existing configuration is left alone: the model name lives in your
-`config.toml` and nothing rewrites it. Run `plz config init` again, or edit the
-`model` field by hand, to move to the new one.
+An existing `config.toml` is left alone: run `plz config init` again, or edit
+the `model` field by hand, to move to the new name.
 
 ## [0.2.1] - 2026-08-17
 
@@ -160,6 +159,7 @@ First release.
 - Prebuilt binaries for macOS (Intel and Apple silicon), Linux and Windows, with
   shell and PowerShell installers and a Homebrew formula.
 
+[0.2.2]: https://github.com/sanail/plz/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/sanail/plz/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/sanail/plz/compare/v0.1.3...v0.2.0
 [0.1.3]: https://github.com/sanail/plz/compare/v0.1.2...v0.1.3
